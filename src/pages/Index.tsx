@@ -5,6 +5,7 @@ import HeroSection from "@/components/HeroSection";
 import NewsSection from "@/components/NewsSection";
 import AILabSection from "@/components/AILabSection";
 import ChatSection from "@/components/ChatSection";
+import GoogleAds from "@/components/GoogleAds";
 
 type Theme = "dark" | "light" | "nature";
 
@@ -31,6 +32,7 @@ const Index = () => {
         return (
           <>
             <HeroSection />
+            <GoogleAds />
             <NewsSection />
             <AILabSection />
           </>
@@ -40,7 +42,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative">
-      {theme === "dark" && <StarryBackground />}
+      <StarryBackground theme={theme} />
       <Navbar
         theme={theme}
         onThemeChange={setTheme}

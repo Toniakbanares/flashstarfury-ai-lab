@@ -8,6 +8,7 @@ const mockNews = [
     category: "IA",
     time: "2h atrás",
     hot: true,
+    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=250&fit=crop",
   },
   {
     id: 2,
@@ -16,6 +17,7 @@ const mockNews = [
     category: "Ciência",
     time: "4h atrás",
     hot: true,
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=250&fit=crop",
   },
   {
     id: 3,
@@ -24,6 +26,7 @@ const mockNews = [
     category: "IA",
     time: "6h atrás",
     hot: false,
+    image: "https://images.unsplash.com/photo-1686191128892-3b37add4c844?w=400&h=250&fit=crop",
   },
   {
     id: 4,
@@ -32,6 +35,7 @@ const mockNews = [
     category: "Flash Star Fury",
     time: "8h atrás",
     hot: false,
+    image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=250&fit=crop",
   },
   {
     id: 5,
@@ -40,6 +44,7 @@ const mockNews = [
     category: "Política",
     time: "12h atrás",
     hot: false,
+    image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=250&fit=crop",
   },
   {
     id: 6,
@@ -48,6 +53,7 @@ const mockNews = [
     category: "Robótica",
     time: "1d atrás",
     hot: false,
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=250&fit=crop",
   },
 ];
 
@@ -64,32 +70,36 @@ const NewsSection = () => {
           {mockNews.map((news) => (
             <article
               key={news.id}
-              className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 cursor-pointer"
+              className="group rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 cursor-pointer"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-primary/10 text-primary">
-                  {news.category}
-                </span>
-                {news.hot && (
-                  <span className="flex items-center gap-1 text-xs text-glow-gold font-semibold">
-                    <Sparkles className="h-3 w-3" /> HOT
+              <div className="relative h-40 overflow-hidden">
+                <img src={news.image} alt={news.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                <div className="absolute top-2 left-2 flex items-center gap-2">
+                  <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-primary/90 text-primary-foreground backdrop-blur-sm">
+                    {news.category}
                   </span>
-                )}
+                  {news.hot && (
+                    <span className="flex items-center gap-1 text-xs text-primary-foreground font-semibold bg-destructive/90 rounded-full px-2 py-0.5 backdrop-blur-sm">
+                      <Sparkles className="h-3 w-3" /> HOT
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <h3 className="font-heading text-sm font-semibold mb-2 text-card-foreground group-hover:text-primary transition-colors leading-tight">
-                {news.title}
-              </h3>
-
-              <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                {news.summary}
-              </p>
-
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" /> {news.time}
-                </span>
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <div className="p-4">
+                <h3 className="font-heading text-sm font-semibold mb-2 text-card-foreground group-hover:text-primary transition-colors leading-tight">
+                  {news.title}
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed line-clamp-2">
+                  {news.summary}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" /> {news.time}
+                  </span>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
               </div>
             </article>
           ))}

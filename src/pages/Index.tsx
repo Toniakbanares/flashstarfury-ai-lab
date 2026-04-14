@@ -1,16 +1,59 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useEffect } from "react";
+import StarryBackground from "@/components/StarryBackground";
+import Navbar from "@/components/Navbar";
+import HeroSection from "@/components/HeroSection";
+import NewsSection from "@/components/NewsSection";
+import AILabSection from "@/components/AILabSection";
+import ChatSection from "@/components/ChatSection";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+type Theme = "dark" | "light" | "nature";
+
+const Index = () => {
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [activeSection, setActiveSection] = useState("home");
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("theme-light", "theme-nature");
+    if (theme === "light") root.classList.add("theme-light");
+    if (theme === "nature") root.classList.add("theme-nature");
+  }, [theme]);
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case "news":
+        return <NewsSection />;
+      case "ai-lab":
+        return <AILabSection />;
+      case "chat":
+        return <ChatSection />;
+      default:
+        return (
+          <>
+            <HeroSection />
+            <NewsSection />
+            <AILabSection />
+          </>
+        );
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background relative">
+      {theme === "dark" && <StarryBackground />}
+      <Navbar
+        theme={theme}
+        onThemeChange={setTheme}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
+      <main className="relative z-10">{renderSection()}</main>
+
+      <footer className="relative z-10 border-t border-border py-6 text-center text-xs text-muted-foreground">
+        <p className="font-heading">⚡ Flash Star Fury © 2026 — Powered by IA</p>
+      </footer>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;

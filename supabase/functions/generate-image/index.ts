@@ -16,46 +16,91 @@ serve(async (req) => {
       });
     }
 
+    const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: `Generate an image: ${prompt}` }],
-        modalities: ["image", "text"],
-      }),
-    });
+    // Try Google Gemini image generation (free)
+    if (GOOGLE_AI_KEY) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_AI_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Generate an image: ${prompt}` }] }],
+            generationConfig: {
+              responseModalities: ["TEXT", "IMAGE"],
+            },
+          }),
+        }
+      );
 
-    if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        let imageUrl = "";
+        let text = "";
+
+        for (const part of parts) {
+          if (part.inlineData) {
+            imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          }
+          if (part.text) {
+            text = part.text;
+          }
+        }
+
+        if (imageUrl) {
+          return new Response(JSON.stringify({ imageUrl, text: text || "Imagem gerada! ✨" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // If no image was generated, return the text
+        if (text) {
+          return new Response(JSON.stringify({ text, error: "O modelo não gerou imagem, mas respondeu com texto." }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Muitas requisições. Tente novamente." }), {
+        return new Response(JSON.stringify({ error: "Limite atingido. Aguarde um minuto." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos esgotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("Image gen error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro na geração de imagem" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      const errText = await response.text();
+      console.error("Google AI image error:", response.status, errText);
     }
 
-    const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    const text = data.choices?.[0]?.message?.content;
+    // Fallback to Lovable AI
+    if (LOVABLE_API_KEY) {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: `Generate an image: ${prompt}` }],
+          modalities: ["image", "text"],
+        }),
+      });
 
-    return new Response(JSON.stringify({ imageUrl, text }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (response.ok) {
+        const data = await response.json();
+        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        const text = data.choices?.[0]?.message?.content;
+        return new Response(JSON.stringify({ imageUrl, text }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ error: "Não foi possível gerar a imagem." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("image gen error:", e);

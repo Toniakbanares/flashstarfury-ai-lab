@@ -8,7 +8,7 @@ const mockNews = [
     category: "IA",
     time: "2h atrás",
     hot: true,
-    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=400&h=250&fit=crop",
   },
   {
     id: 2,
@@ -17,7 +17,7 @@ const mockNews = [
     category: "Ciência",
     time: "4h atrás",
     hot: true,
-    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=250&fit=crop",
   },
   {
     id: 3,
@@ -26,7 +26,7 @@ const mockNews = [
     category: "IA",
     time: "6h atrás",
     hot: false,
-    image: "https://images.unsplash.com/photo-1686191128892-3b37add4c844?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1547954575-855750c57bd3?w=400&h=250&fit=crop",
   },
   {
     id: 4,
@@ -35,7 +35,7 @@ const mockNews = [
     category: "Flash Star Fury",
     time: "8h atrás",
     hot: false,
-    image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=250&fit=crop",
   },
   {
     id: 5,
@@ -44,7 +44,7 @@ const mockNews = [
     category: "Política",
     time: "12h atrás",
     hot: false,
-    image: "https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=250&fit=crop",
   },
   {
     id: 6,
@@ -53,7 +53,7 @@ const mockNews = [
     category: "Robótica",
     time: "1d atrás",
     hot: false,
-    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1563207153-f403bf289096?w=400&h=250&fit=crop",
   },
 ];
 
@@ -72,8 +72,16 @@ const NewsSection = () => {
               key={news.id}
               className="group rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 cursor-pointer"
             >
-              <div className="relative h-40 overflow-hidden">
-                <img src={news.image} alt={news.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+              <div className="relative h-40 overflow-hidden bg-muted">
+                <img
+                  src={news.image}
+                  alt={news.title}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
                 <div className="absolute top-2 left-2 flex items-center gap-2">
                   <span className="text-xs font-semibold rounded-full px-2.5 py-0.5 bg-primary/90 text-primary-foreground backdrop-blur-sm">

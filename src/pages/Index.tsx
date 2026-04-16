@@ -34,7 +34,9 @@ const Index = () => {
             <HeroSection />
             <GoogleAds />
             <NewsSection />
+            <GoogleAds />
             <AILabSection />
+            <GoogleAds />
           </>
         );
     }

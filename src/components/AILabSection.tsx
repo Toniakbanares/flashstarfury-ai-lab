@@ -1,18 +1,42 @@
 import { useState } from "react";
-import { Bot, Image, MessageSquare, Wand2, Zap, Globe, Send, Loader2, ArrowLeft } from "lucide-react";
+import {
+  Bot, Image, MessageSquare, Wand2, Globe, Send, Loader2, ArrowLeft,
+  Code, FileText, Languages, Music, Mic, Calculator, BookOpen, Palette
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat, generateImage } from "@/lib/ai";
 import { useToast } from "@/hooks/use-toast";
 
-type Tool = "chat" | "image" | "creative" | "search" | null;
+type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
 
 const tools = [
   { id: "chat" as Tool, icon: MessageSquare, title: "Chat Inteligente", description: "Converse com IA avançada sobre qualquer assunto.", color: "text-accent" },
-  { id: "image" as Tool, icon: Image, title: "Geração de Imagens", description: "Crie imagens a partir de descrições de texto.", color: "text-primary" },
-  { id: "creative" as Tool, icon: Wand2, title: "Assistente Criativo", description: "Escreva textos, poemas, código e muito mais.", color: "text-secondary" },
+  { id: "image" as Tool, icon: Image, title: "Geração de Imagens", description: "Crie imagens incríveis a partir de texto.", color: "text-primary" },
+  { id: "creative" as Tool, icon: Wand2, title: "Assistente Criativo", description: "Escreva textos, roteiros e conteúdo criativo.", color: "text-secondary" },
   { id: "search" as Tool, icon: Globe, title: "Busca Inteligente", description: "Pesquise informações com IA contextual.", color: "text-glow-blue" },
+  { id: "code" as Tool, icon: Code, title: "Gerador de Código", description: "Gere código em qualquer linguagem de programação.", color: "text-accent" },
+  { id: "summarize" as Tool, icon: FileText, title: "Resumidor de Textos", description: "Resuma artigos, documentos e textos longos.", color: "text-primary" },
+  { id: "translate" as Tool, icon: Languages, title: "Tradutor Universal", description: "Traduza textos entre qualquer idioma.", color: "text-secondary" },
+  { id: "poem" as Tool, icon: BookOpen, title: "Poeta IA", description: "Crie poemas, haikus e textos poéticos.", color: "text-glow-blue" },
 ];
+
+const modeMap: Record<string, string> = {
+  chat: "chat",
+  creative: "creative",
+  search: "search",
+  code: "creative",
+  summarize: "creative",
+  translate: "creative",
+  poem: "creative",
+};
+
+const systemHints: Record<string, string> = {
+  code: "Gere código limpo e bem comentado para: ",
+  summarize: "Resuma o seguinte texto de forma clara e concisa: ",
+  translate: "Traduza o seguinte texto: ",
+  poem: "Escreva um poema criativo sobre: ",
+};
 
 const AILabSection = () => {
   const { toast } = useToast();
@@ -39,14 +63,25 @@ const AILabSection = () => {
       setIsLoading(false);
     } else {
       let response = "";
+      const hint = systemHints[activeTool || ""] || "";
+      const userContent = hint ? `${hint}${input}` : input;
+
       await streamChat({
-        messages: [{ role: "user", content: input }],
-        mode: activeTool === "creative" ? "creative" : activeTool === "search" ? "search" : undefined,
+        messages: [{ role: "user", content: userContent }],
+        mode: modeMap[activeTool || "chat"] || undefined,
         onDelta: (chunk) => { response += chunk; setOutput(response); },
         onDone: () => setIsLoading(false),
         onError: (error) => { toast({ title: "Erro", description: error, variant: "destructive" }); setIsLoading(false); },
       });
     }
+  };
+
+  const placeholders: Record<string, string> = {
+    image: "Descreva a imagem que deseja criar...",
+    code: "Descreva o código que precisa (ex: 'função de login em Python')...",
+    summarize: "Cole o texto que deseja resumir...",
+    translate: "Digite o texto e o idioma destino (ex: 'Hello world → português')...",
+    poem: "Sobre o que você quer um poema?",
   };
 
   if (activeTool) {
@@ -71,7 +106,7 @@ const AILabSection = () => {
             <div className="flex gap-2">
               <input value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                placeholder={activeTool === "image" ? "Descreva a imagem que deseja criar..." : "Digite sua pergunta..."}
+                placeholder={placeholders[activeTool || ""] || "Digite sua pergunta..."}
                 className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 disabled={isLoading} />
               <button onClick={handleSubmit} disabled={!input.trim() || isLoading}
@@ -111,17 +146,17 @@ const AILabSection = () => {
           <h2 className="font-heading text-2xl font-bold gradient-text">Laboratório de IA</h2>
         </div>
         <p className="text-muted-foreground mb-8 max-w-xl">
-          Explore ferramentas poderosas de inteligência artificial, todas integradas e prontas para uso.
+          Explore 8 ferramentas poderosas de inteligência artificial, todas integradas e prontas para uso.
         </p>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {tools.map((tool) => (
             <button key={tool.id} onClick={() => setActiveTool(tool.id)}
-              className="group rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 text-left">
-              <tool.icon className={`h-8 w-8 mb-4 ${tool.color} transition-transform group-hover:scale-110`} />
-              <h3 className="font-heading text-sm font-semibold mb-2 text-card-foreground">{tool.title}</h3>
+              className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 text-left">
+              <tool.icon className={`h-7 w-7 mb-3 ${tool.color} transition-transform group-hover:scale-110`} />
+              <h3 className="font-heading text-sm font-semibold mb-1.5 text-card-foreground">{tool.title}</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">{tool.description}</p>
-              <span className="inline-block mt-3 text-xs font-semibold text-primary">Usar agora →</span>
+              <span className="inline-block mt-2 text-xs font-semibold text-primary">Usar agora →</span>
             </button>
           ))}
         </div>

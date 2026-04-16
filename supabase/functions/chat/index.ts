@@ -93,11 +93,16 @@ serve(async (req) => {
         });
       }
 
-      // If Google fails with 429, return rate limit error
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições atingido. Aguarde um minuto." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      // If Google fails, log and try fallback
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Google AI error:", response.status, errText);
+        
+        if (response.status === 429) {
+          // Don't return yet - try Lovable fallback
+        } else {
+          // For other errors, try fallback too
+        }
       }
     }
 

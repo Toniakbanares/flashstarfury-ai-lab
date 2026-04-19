@@ -19,11 +19,11 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_KEY");
 
-    // 1) Google Gemini direto (free tier - tenta primeiro pra economizar Lovable)
+    // 1) Google Gemini direto (modelo atual de geração de imagem)
     if (GOOGLE_AI_KEY) {
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_AI_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_AI_KEY}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -80,8 +80,9 @@ serve(async (req) => {
       } catch (e) { console.error("Lovable exception:", e); }
     }
 
-    return new Response(JSON.stringify({ error: "Não foi possível gerar a imagem. Provedores indisponíveis." }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Retorna 200 com erro + fallback:true para o cliente acionar Puter.js
+    return new Response(JSON.stringify({ error: "Provedores de imagem indisponíveis. Usando fallback.", fallback: true }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("image gen error:", e);

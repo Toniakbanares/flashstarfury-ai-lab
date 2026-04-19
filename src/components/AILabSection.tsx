@@ -5,8 +5,8 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
-import { streamChat, generateImage } from "@/lib/ai";
-import { pollinationsImage, pollinationsText } from "@/lib/freeai";
+import { streamChat } from "@/lib/ai";
+import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { useToast } from "@/hooks/use-toast";
 
 type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
@@ -46,6 +46,9 @@ const AILabSection = () => {
   const [output, setOutput] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [imgModel, setImgModel] = useState<string>("flux");
+  const [imgRatio, setImgRatio] = useState<string>("1:1");
+  const [imgEnhance, setImgEnhance] = useState<boolean>(true);
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
@@ -54,14 +57,19 @@ const AILabSection = () => {
     setGeneratedImage(null);
 
     if (activeTool === "image") {
-      const result = await generateImage(input);
-      if (result.imageUrl) {
-        setGeneratedImage(result.imageUrl);
-        setOutput(result.text || "Imagem gerada com sucesso! ✨");
-      } else {
-        // Fallback gratuito: Pollinations.ai (sem login, sem API key)
-        setGeneratedImage(pollinationsImage(input));
-        setOutput("Imagem gerada via Pollinations! ✨");
+      try {
+        const ratio = ASPECT_RATIOS.find(r => r.id === imgRatio) || ASPECT_RATIOS[0];
+        const url = pollinationsImage(input, {
+          width: ratio.w,
+          height: ratio.h,
+          model: imgModel,
+          enhance: imgEnhance,
+        });
+        await preloadImage(url);
+        setGeneratedImage(url);
+        setOutput(`Imagem gerada! ✨ (${POLLINATIONS_MODELS.find(m => m.id === imgModel)?.name}, ${ratio.name})`);
+      } catch (e) {
+        toast({ title: "Erro", description: "Falha ao gerar imagem. Tente novamente.", variant: "destructive" });
       }
       setIsLoading(false);
     } else {

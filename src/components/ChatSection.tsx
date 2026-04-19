@@ -3,6 +3,7 @@ import { Send, Image, Sparkles, User, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat, generateImage } from "@/lib/ai";
+import { puterChat, puterImage, isPuterReady } from "@/lib/puter";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {

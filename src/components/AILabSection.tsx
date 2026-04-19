@@ -25,7 +25,7 @@ const modeMap: Record<string, string> = {
   chat: "chat",
   creative: "creative",
   search: "search",
-  code: "creative",
+  code: "code",
   summarize: "creative",
   translate: "creative",
   poem: "creative",

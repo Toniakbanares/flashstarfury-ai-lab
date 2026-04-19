@@ -3,6 +3,7 @@ import { Send, Image, Sparkles, User, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat, generateImage } from "@/lib/ai";
+import { puterChat, puterImage, isPuterReady } from "@/lib/puter";
 import { useToast } from "@/hooks/use-toast";
 
 interface Message {
@@ -39,26 +40,38 @@ const ChatSection = () => {
     setIsLoading(true);
 
     let assistantSoFar = "";
+    let gotAnyDelta = false;
     const allMessages = [...messages.filter(m => !m.image), userMsg].map(m => ({ role: m.role, content: m.content }));
+
+    const appendAssistant = (text: string) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last.id === -1) {
+          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: text } : m);
+        }
+        return [...prev, { id: -1, role: "assistant", content: text }];
+      });
+    };
 
     await streamChat({
       messages: allMessages,
-      onDelta: (chunk) => {
-        assistantSoFar += chunk;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant" && last.id === -1) {
-            return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
-          }
-          return [...prev, { id: -1, role: "assistant", content: assistantSoFar }];
-        });
-      },
+      onDelta: (chunk) => { gotAnyDelta = true; assistantSoFar += chunk; appendAssistant(assistantSoFar); },
       onDone: () => {
         setMessages((prev) => prev.map(m => m.id === -1 ? { ...m, id: Date.now() } : m));
         setIsLoading(false);
       },
-      onError: (error) => {
-        toast({ title: "Erro", description: error, variant: "destructive" });
+      onError: async (error) => {
+        if (!gotAnyDelta && isPuterReady()) {
+          try {
+            const txt = await puterChat(currentInput, "Você é o Lumy, assistente do Flash Star Fury. Responda em pt-BR com markdown e emojis.");
+            appendAssistant(txt);
+            setMessages((prev) => prev.map(m => m.id === -1 ? { ...m, id: Date.now() } : m));
+          } catch {
+            toast({ title: "Erro", description: error, variant: "destructive" });
+          }
+        } else {
+          toast({ title: "Erro", description: error, variant: "destructive" });
+        }
         setIsLoading(false);
       },
     });
@@ -72,10 +85,17 @@ const ChatSection = () => {
     setIsGeneratingImage(true);
 
     const result = await generateImage(prompt);
-    if (result.error) {
-      toast({ title: "Erro", description: result.error, variant: "destructive" });
-    } else if (result.imageUrl) {
+    if (result.imageUrl) {
       setMessages(prev => [...prev, { id: Date.now(), role: "assistant", content: result.text || "Aqui está sua imagem! ✨", image: result.imageUrl }]);
+    } else if (isPuterReady()) {
+      try {
+        const url = await puterImage(prompt);
+        setMessages(prev => [...prev, { id: Date.now(), role: "assistant", content: "Imagem gerada via Puter! ✨", image: url }]);
+      } catch {
+        toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
+      }
+    } else {
+      toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
     }
     setIsGeneratingImage(false);
   };

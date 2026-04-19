@@ -6,6 +6,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat, generateImage } from "@/lib/ai";
+import { puterChat, puterImage, isPuterReady } from "@/lib/puter";
 import { useToast } from "@/hooks/use-toast";
 
 type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
@@ -54,24 +55,45 @@ const AILabSection = () => {
 
     if (activeTool === "image") {
       const result = await generateImage(input);
-      if (result.error) {
-        toast({ title: "Erro", description: result.error, variant: "destructive" });
-      } else if (result.imageUrl) {
+      if (result.imageUrl) {
         setGeneratedImage(result.imageUrl);
         setOutput(result.text || "Imagem gerada com sucesso! ✨");
+      } else if (isPuterReady()) {
+        try {
+          const url = await puterImage(input);
+          setGeneratedImage(url);
+          setOutput("Imagem gerada via Puter! ✨");
+        } catch (e) {
+          toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
+        }
+      } else {
+        toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
       }
       setIsLoading(false);
     } else {
       let response = "";
       const hint = systemHints[activeTool || ""] || "";
       const userContent = hint ? `${hint}${input}` : input;
+      let gotAnyDelta = false;
 
       await streamChat({
         messages: [{ role: "user", content: userContent }],
         mode: modeMap[activeTool || "chat"] || undefined,
-        onDelta: (chunk) => { response += chunk; setOutput(response); },
+        onDelta: (chunk) => { gotAnyDelta = true; response += chunk; setOutput(response); },
         onDone: () => setIsLoading(false),
-        onError: (error) => { toast({ title: "Erro", description: error, variant: "destructive" }); setIsLoading(false); },
+        onError: async (error) => {
+          if (!gotAnyDelta && isPuterReady()) {
+            try {
+              const txt = await puterChat(userContent, "Você é o Lumy, assistente do Flash Star Fury. Responda em português brasileiro com markdown e emojis.");
+              setOutput(txt);
+            } catch {
+              toast({ title: "Erro", description: error, variant: "destructive" });
+            }
+          } else {
+            toast({ title: "Erro", description: error, variant: "destructive" });
+          }
+          setIsLoading(false);
+        },
       });
     }
   };

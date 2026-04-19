@@ -61,9 +61,9 @@ const ChatSection = () => {
         setIsLoading(false);
       },
       onError: async (error) => {
-        if (!gotAnyDelta && isPuterReady()) {
+        if (!gotAnyDelta) {
           try {
-            const txt = await puterChat(currentInput, "Você é o Lumy, assistente do Flash Star Fury. Responda em pt-BR com markdown e emojis.");
+            const txt = await pollinationsText(currentInput, "Você é o Lumy, assistente do Flash Star Fury. Responda em pt-BR com markdown e emojis.");
             appendAssistant(txt);
             setMessages((prev) => prev.map(m => m.id === -1 ? { ...m, id: Date.now() } : m));
           } catch {
@@ -87,15 +87,9 @@ const ChatSection = () => {
     const result = await generateImage(prompt);
     if (result.imageUrl) {
       setMessages(prev => [...prev, { id: Date.now(), role: "assistant", content: result.text || "Aqui está sua imagem! ✨", image: result.imageUrl }]);
-    } else if (isPuterReady()) {
-      try {
-        const url = await puterImage(prompt);
-        setMessages(prev => [...prev, { id: Date.now(), role: "assistant", content: "Imagem gerada via Puter! ✨", image: url }]);
-      } catch {
-        toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
-      }
     } else {
-      toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
+      const url = pollinationsImage(prompt);
+      setMessages(prev => [...prev, { id: Date.now(), role: "assistant", content: "Imagem gerada via Pollinations! ✨", image: url }]);
     }
     setIsGeneratingImage(false);
   };

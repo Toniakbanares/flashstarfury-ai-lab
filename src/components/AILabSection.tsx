@@ -6,7 +6,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat, generateImage } from "@/lib/ai";
-import { puterChat, puterImage, isPuterReady } from "@/lib/puter";
+import { pollinationsImage, pollinationsText } from "@/lib/freeai";
 import { useToast } from "@/hooks/use-toast";
 
 type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
@@ -58,16 +58,10 @@ const AILabSection = () => {
       if (result.imageUrl) {
         setGeneratedImage(result.imageUrl);
         setOutput(result.text || "Imagem gerada com sucesso! ✨");
-      } else if (isPuterReady()) {
-        try {
-          const url = await puterImage(input);
-          setGeneratedImage(url);
-          setOutput("Imagem gerada via Puter! ✨");
-        } catch (e) {
-          toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
-        }
       } else {
-        toast({ title: "Erro", description: result.error || "Falha ao gerar imagem", variant: "destructive" });
+        // Fallback gratuito: Pollinations.ai (sem login, sem API key)
+        setGeneratedImage(pollinationsImage(input));
+        setOutput("Imagem gerada via Pollinations! ✨");
       }
       setIsLoading(false);
     } else {
@@ -82,9 +76,9 @@ const AILabSection = () => {
         onDelta: (chunk) => { gotAnyDelta = true; response += chunk; setOutput(response); },
         onDone: () => setIsLoading(false),
         onError: async (error) => {
-          if (!gotAnyDelta && isPuterReady()) {
+          if (!gotAnyDelta) {
             try {
-              const txt = await puterChat(userContent, "Você é o Lumy, assistente do Flash Star Fury. Responda em português brasileiro com markdown e emojis.");
+              const txt = await pollinationsText(userContent, "Você é o Lumy, assistente do Flash Star Fury. Responda em português brasileiro com markdown e emojis.");
               setOutput(txt);
             } catch {
               toast({ title: "Erro", description: error, variant: "destructive" });

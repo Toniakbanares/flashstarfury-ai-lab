@@ -127,6 +127,31 @@ const AILabSection = () => {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            {activeTool === "image" && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Modelo de arte</label>
+                  <select value={imgModel} onChange={e => setImgModel(e.target.value)} disabled={isLoading}
+                    className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border">
+                    {POLLINATIONS_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Aspect ratio</label>
+                  <select value={imgRatio} onChange={e => setImgRatio(e.target.value)} disabled={isLoading}
+                    className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border">
+                    {ASPECT_RATIOS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input type="checkbox" checked={imgEnhance} onChange={e => setImgEnhance(e.target.checked)} disabled={isLoading}
+                      className="w-4 h-4 rounded accent-primary" />
+                    Melhorar prompt (IA)
+                  </label>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <input value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}

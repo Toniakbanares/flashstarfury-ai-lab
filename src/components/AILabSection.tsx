@@ -5,8 +5,8 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
-import { streamChat, generateImage } from "@/lib/ai";
-import { pollinationsImage, pollinationsText } from "@/lib/freeai";
+import { streamChat } from "@/lib/ai";
+import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { useToast } from "@/hooks/use-toast";
 
 type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
@@ -46,6 +46,9 @@ const AILabSection = () => {
   const [output, setOutput] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [imgModel, setImgModel] = useState<string>("flux");
+  const [imgRatio, setImgRatio] = useState<string>("1:1");
+  const [imgEnhance, setImgEnhance] = useState<boolean>(true);
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
@@ -54,14 +57,19 @@ const AILabSection = () => {
     setGeneratedImage(null);
 
     if (activeTool === "image") {
-      const result = await generateImage(input);
-      if (result.imageUrl) {
-        setGeneratedImage(result.imageUrl);
-        setOutput(result.text || "Imagem gerada com sucesso! ✨");
-      } else {
-        // Fallback gratuito: Pollinations.ai (sem login, sem API key)
-        setGeneratedImage(pollinationsImage(input));
-        setOutput("Imagem gerada via Pollinations! ✨");
+      try {
+        const ratio = ASPECT_RATIOS.find(r => r.id === imgRatio) || ASPECT_RATIOS[0];
+        const url = pollinationsImage(input, {
+          width: ratio.w,
+          height: ratio.h,
+          model: imgModel,
+          enhance: imgEnhance,
+        });
+        await preloadImage(url);
+        setGeneratedImage(url);
+        setOutput(`Imagem gerada! ✨ (${POLLINATIONS_MODELS.find(m => m.id === imgModel)?.name}, ${ratio.name})`);
+      } catch (e) {
+        toast({ title: "Erro", description: "Falha ao gerar imagem. Tente novamente.", variant: "destructive" });
       }
       setIsLoading(false);
     } else {
@@ -119,6 +127,31 @@ const AILabSection = () => {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            {activeTool === "image" && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Modelo de arte</label>
+                  <select value={imgModel} onChange={e => setImgModel(e.target.value)} disabled={isLoading}
+                    className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border">
+                    {POLLINATIONS_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Aspect ratio</label>
+                  <select value={imgRatio} onChange={e => setImgRatio(e.target.value)} disabled={isLoading}
+                    className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border">
+                    {ASPECT_RATIOS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input type="checkbox" checked={imgEnhance} onChange={e => setImgEnhance(e.target.checked)} disabled={isLoading}
+                      className="w-4 h-4 rounded accent-primary" />
+                    Melhorar prompt (IA)
+                  </label>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <input value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}

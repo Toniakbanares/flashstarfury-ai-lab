@@ -38,6 +38,7 @@ const App = () => (
               <Route path="/ai-logo-generator" element={<AILogoGenerator />} />
               <Route path="/ai-avatar-generator" element={<AIAvatarGenerator />} />
               <Route path="/ai-art-generator" element={<AIArtGenerator />} />
+              <Route path="/create/:id" element={<CreationDetails />} />
             </Route>
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />

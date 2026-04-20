@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   Bot, Image, MessageSquare, Wand2, Globe, Send, Loader2, ArrowLeft,
-  Code, FileText, Languages, Music, Mic, Calculator, BookOpen, Palette
+  Code, FileText, Languages, Music, Mic, Calculator, BookOpen, Palette, Sparkles
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
 import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCredits } from "@/hooks/useCredits";
+import { supabase } from "@/integrations/supabase/client";
 
 type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
 

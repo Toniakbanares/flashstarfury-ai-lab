@@ -200,11 +200,16 @@ const AILabSection = () => {
                 placeholder={placeholders[activeTool || ""] || "Digite sua pergunta..."}
                 className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 disabled={isLoading} />
-              <button onClick={handleSubmit} disabled={!input.trim() || isLoading}
+              <button onClick={handleSubmit} disabled={!input.trim() || isLoading || (user !== null && credits <= 0)}
                 className="p-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-all">
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </button>
             </div>
+            {user && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-primary" /> Custo: 1 crédito • Você tem {credits} restantes hoje
+              </p>
+            )}
 
             {(output || generatedImage) && (
               <div className="bg-muted rounded-lg p-4">
@@ -213,6 +218,11 @@ const AILabSection = () => {
                   <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
                     <ReactMarkdown>{output}</ReactMarkdown>
                   </div>
+                )}
+                {lastGenId && (
+                  <Link to={`/create/${lastGenId}`} className="inline-block mt-3 text-xs text-primary hover:underline">
+                    Ver na galeria Explore →
+                  </Link>
                 )}
               </div>
             )}

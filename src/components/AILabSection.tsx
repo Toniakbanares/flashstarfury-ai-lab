@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   Bot, Image, MessageSquare, Wand2, Globe, Send, Loader2, ArrowLeft,
-  Code, FileText, Languages, Music, Mic, Calculator, BookOpen, Palette
+  Code, FileText, Languages, Music, Mic, Calculator, BookOpen, Palette, Sparkles
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
 import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCredits } from "@/hooks/useCredits";
+import { supabase } from "@/integrations/supabase/client";
 
 type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
 
@@ -41,6 +45,9 @@ const systemHints: Record<string, string> = {
 
 const AILabSection = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { credits, useCredit } = useCredits();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTool, setActiveTool] = useState<Tool>(null);
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
@@ -49,25 +56,56 @@ const AILabSection = () => {
   const [imgModel, setImgModel] = useState<string>("flux");
   const [imgRatio, setImgRatio] = useState<string>("1:1");
   const [imgEnhance, setImgEnhance] = useState<boolean>(true);
+  const [lastGenId, setLastGenId] = useState<string | null>(null);
+
+  // Prefill from Explore/Remix/Template query params
+  useEffect(() => {
+    const t = searchParams.get("tool");
+    const p = searchParams.get("prompt");
+    if (t && tools.some(x => x.id === t)) setActiveTool(t as Tool);
+    if (p) setInput(p);
+  }, []);
+
+  const saveGeneration = async (prompt: string, imageUrl: string | null, resultText: string | null, toolType: string) => {
+    if (!user) return null;
+    const { data } = await supabase.from("generations").insert({
+      user_id: user.id, prompt, image_url: imageUrl, result_text: resultText,
+      tool_type: toolType, is_public: true,
+    }).select("id").maybeSingle();
+    return data?.id ?? null;
+  };
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Credit gate (only for logged users — guests still can try but won't save)
+    if (user && credits <= 0) {
+      toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários. Volte amanhã ou faça upgrade.", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
     setOutput("");
     setGeneratedImage(null);
+    setLastGenId(null);
 
     if (activeTool === "image") {
       try {
         const ratio = ASPECT_RATIOS.find(r => r.id === imgRatio) || ASPECT_RATIOS[0];
         const url = pollinationsImage(input, {
-          width: ratio.w,
-          height: ratio.h,
-          model: imgModel,
-          enhance: imgEnhance,
+          width: ratio.w, height: ratio.h, model: imgModel, enhance: imgEnhance,
         });
         await preloadImage(url);
         setGeneratedImage(url);
         setOutput(`Imagem gerada! ✨ (${POLLINATIONS_MODELS.find(m => m.id === imgModel)?.name}, ${ratio.name})`);
+        if (user) {
+          await useCredit();
+          const genId = await saveGeneration(input, url, null, "image");
+          if (genId) {
+            setLastGenId(genId);
+            toast({ title: "Adicionada ao Explore ✨", description: "Sua criação agora é pública na galeria." });
+          }
+        }
       } catch (e) {
         toast({ title: "Erro", description: "Falha ao gerar imagem. Tente novamente.", variant: "destructive" });
       }
@@ -82,12 +120,16 @@ const AILabSection = () => {
         messages: [{ role: "user", content: userContent }],
         mode: modeMap[activeTool || "chat"] || undefined,
         onDelta: (chunk) => { gotAnyDelta = true; response += chunk; setOutput(response); },
-        onDone: () => setIsLoading(false),
+        onDone: async () => {
+          setIsLoading(false);
+          if (user && response) { await useCredit(); await saveGeneration(input, null, response, activeTool || "chat"); }
+        },
         onError: async (error) => {
           if (!gotAnyDelta) {
             try {
-              const txt = await pollinationsText(userContent, "Você é o Lumy, assistente do Flash Star Fury. Responda em português brasileiro com markdown e emojis.");
+              const txt = await pollinationsText(userContent, "Você é o Lumy, assistente do PixelNova AI. Responda em português brasileiro com markdown e emojis.");
               setOutput(txt);
+              if (user) { await useCredit(); await saveGeneration(input, null, txt, activeTool || "chat"); }
             } catch {
               toast({ title: "Erro", description: error, variant: "destructive" });
             }
@@ -158,11 +200,16 @@ const AILabSection = () => {
                 placeholder={placeholders[activeTool || ""] || "Digite sua pergunta..."}
                 className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 disabled={isLoading} />
-              <button onClick={handleSubmit} disabled={!input.trim() || isLoading}
+              <button onClick={handleSubmit} disabled={!input.trim() || isLoading || (user !== null && credits <= 0)}
                 className="p-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-all">
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </button>
             </div>
+            {user && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-primary" /> Custo: 1 crédito • Você tem {credits} restantes hoje
+              </p>
+            )}
 
             {(output || generatedImage) && (
               <div className="bg-muted rounded-lg p-4">
@@ -171,6 +218,11 @@ const AILabSection = () => {
                   <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
                     <ReactMarkdown>{output}</ReactMarkdown>
                   </div>
+                )}
+                {lastGenId && (
+                  <Link to={`/create/${lastGenId}`} className="inline-block mt-3 text-xs text-primary hover:underline">
+                    Ver na galeria Explore →
+                  </Link>
                 )}
               </div>
             )}

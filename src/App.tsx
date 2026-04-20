@@ -15,6 +15,7 @@ import AIImageGenerator from "./pages/AIImageGenerator";
 import AILogoGenerator from "./pages/AILogoGenerator";
 import AIAvatarGenerator from "./pages/AIAvatarGenerator";
 import AIArtGenerator from "./pages/AIArtGenerator";
+import CreationDetails from "./pages/CreationDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/ai-logo-generator" element={<AILogoGenerator />} />
               <Route path="/ai-avatar-generator" element={<AIAvatarGenerator />} />
               <Route path="/ai-art-generator" element={<AIArtGenerator />} />
+              <Route path="/create/:id" element={<CreationDetails />} />
             </Route>
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />

@@ -15,6 +15,7 @@ import AIImageGenerator from "./pages/AIImageGenerator";
 import AILogoGenerator from "./pages/AILogoGenerator";
 import AIAvatarGenerator from "./pages/AIAvatarGenerator";
 import AIArtGenerator from "./pages/AIArtGenerator";
+import CreationDetails from "./pages/CreationDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

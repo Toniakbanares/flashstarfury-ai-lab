@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift } from "lucide-react";
+import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import mascotImg from "@/assets/mascot.png";
@@ -35,12 +35,20 @@ const AppNavbar = () => {
             </Link>
           ))}
           {user && (
-            <Link to="/dashboard"
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                location.pathname === "/dashboard" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}>
-              <LayoutDashboard className="h-4 w-4" /> Dashboard
-            </Link>
+            <>
+              <Link to="/favorites"
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                  location.pathname === "/favorites" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}>
+                <Bookmark className="h-4 w-4" /> Favorites
+              </Link>
+              <Link to="/dashboard"
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                  location.pathname === "/dashboard" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}>
+                <LayoutDashboard className="h-4 w-4" /> Dashboard
+              </Link>
+            </>
           )}
         </div>
 

@@ -19,6 +19,8 @@ import CreationDetails from "./pages/CreationDetails";
 import Offerings from "./pages/Offerings";
 import OfferDetails from "./pages/OfferDetails";
 import SavedOffers from "./pages/SavedOffers";
+import ToolDetails from "./pages/ToolDetails";
+import Favorites from "./pages/Favorites";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,8 @@ const App = () => (
               <Route path="/offerings" element={<Offerings />} />
               <Route path="/offer/:id" element={<OfferDetails />} />
               <Route path="/saved" element={<SavedOffers />} />
+              <Route path="/tool/:slug" element={<ToolDetails />} />
+              <Route path="/favorites" element={<Favorites />} />
             </Route>
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />

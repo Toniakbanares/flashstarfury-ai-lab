@@ -43,7 +43,7 @@ const LeadCapturePopup = () => {
     const parsed = leadSchema.safeParse({ name, email });
     if (!parsed.success) { toast({ title: parsed.error.issues[0].message, variant: "destructive" }); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("leads").insert({ ...parsed.data, source: "offerings_popup" });
+    const { error } = await supabase.from("leads").insert({ name: parsed.data.name, email: parsed.data.email, source: "offerings_popup" });
     setSubmitting(false);
     if (error) { toast({ title: "Erro ao enviar", variant: "destructive" }); return; }
     toast({ title: "🎉 Bem-vindo!", description: "Você receberá novas ofertas em breve." });

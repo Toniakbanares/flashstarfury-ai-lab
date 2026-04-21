@@ -107,8 +107,8 @@ const Offerings = () => {
               <div className="flex items-start justify-between mb-2 gap-2">
                 <Badge variant="outline" className="text-[10px]">{o.category}</Badge>
                 <div className="flex gap-1">
-                  {o.is_new && <Badge className="text-[10px] bg-blue-500">New</Badge>}
-                  {o.is_trending && <Badge className="text-[10px] bg-orange-500"><TrendingUp className="h-2.5 w-2.5 mr-0.5" />Hot</Badge>}
+                  {o.is_new && <Badge variant="secondary" className="text-[10px]">New</Badge>}
+                  {o.is_trending && <Badge variant="secondary" className="text-[10px]"><TrendingUp className="h-2.5 w-2.5 mr-0.5" />Hot</Badge>}
                   <Badge variant={o.tier === "premium" ? "default" : "secondary"} className="text-[10px]">{o.tier === "premium" ? "Premium" : "Free"}</Badge>
                 </div>
               </div>

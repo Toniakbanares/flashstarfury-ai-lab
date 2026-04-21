@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star } from "lucide-react";
+import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import mascotImg from "@/assets/mascot.png";
@@ -8,6 +8,7 @@ const navItems = [
   { path: "/", label: "Home", icon: Sparkles },
   { path: "/tools", label: "Tools", icon: Wrench },
   { path: "/explore", label: "Explore", icon: Compass },
+  { path: "/offerings", label: "Earn", icon: Gift },
   { path: "/pricing", label: "Pricing", icon: CreditCard },
 ];
 

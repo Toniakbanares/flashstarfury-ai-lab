@@ -9,6 +9,13 @@ export function shareLinks(url: string, text: string) {
   };
 }
 
+export async function shareLink(url: string, title: string): Promise<void> {
+  if (navigator.share) {
+    try { await navigator.share({ url, title }); return; } catch { /* fallback below */ }
+  }
+  await copyToClipboard(url);
+}
+
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);

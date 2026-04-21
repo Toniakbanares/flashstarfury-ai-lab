@@ -79,6 +79,93 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
+      offers: {
+        Row: {
+          benefits: string[] | null
+          category: string
+          clicks_count: number
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_featured: boolean
+          is_new: boolean
+          is_trending: boolean
+          likes_count: number
+          long_description: string | null
+          tags: string[] | null
+          tier: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          benefits?: string[] | null
+          category?: string
+          clicks_count?: number
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          is_new?: boolean
+          is_trending?: boolean
+          likes_count?: number
+          long_description?: string | null
+          tags?: string[] | null
+          tier?: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          benefits?: string[] | null
+          category?: string
+          clicks_count?: number
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          is_new?: boolean
+          is_trending?: boolean
+          likes_count?: number
+          long_description?: string | null
+          tags?: string[] | null
+          tier?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -105,6 +192,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      saved_offers: {
+        Row: {
+          created_at: string
+          id: string
+          offer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          offer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          offer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_offers_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_credits: {
         Row: {

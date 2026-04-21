@@ -103,6 +103,35 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_likes: {
+        Row: {
+          created_at: string
+          id: string
+          offer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          offer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          offer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_likes_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offers: {
         Row: {
           benefits: string[] | null
@@ -118,11 +147,13 @@ export type Database = {
           is_trending: boolean
           likes_count: number
           long_description: string | null
+          slug: string | null
           tags: string[] | null
           tier: string
           title: string
           updated_at: string
           url: string
+          views_count: number
         }
         Insert: {
           benefits?: string[] | null
@@ -138,11 +169,13 @@ export type Database = {
           is_trending?: boolean
           likes_count?: number
           long_description?: string | null
+          slug?: string | null
           tags?: string[] | null
           tier?: string
           title: string
           updated_at?: string
           url: string
+          views_count?: number
         }
         Update: {
           benefits?: string[] | null
@@ -158,11 +191,13 @@ export type Database = {
           is_trending?: boolean
           likes_count?: number
           long_description?: string | null
+          slug?: string | null
           tags?: string[] | null
           tier?: string
           title?: string
           updated_at?: string
           url?: string
+          views_count?: number
         }
         Relationships: []
       }
@@ -251,7 +286,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_offer_clicks: {
+        Args: { _offer_id: string }
+        Returns: undefined
+      }
+      increment_offer_views: { Args: { _offer_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

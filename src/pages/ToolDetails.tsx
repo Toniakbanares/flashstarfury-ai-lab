@@ -10,6 +10,7 @@ import { shareLink } from "@/lib/share";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToolLikes } from "@/hooks/useToolLikes";
+import { getSubmittedTools } from "@/lib/localStore";
 
 type Tool = {
   id: string; slug: string | null; title: string; description: string;
@@ -29,8 +30,14 @@ const ToolDetails = () => {
 
   useEffect(() => {
     if (!slug) return;
-    // try slug first, fallback to id
     const fetch = async () => {
+      // local submission first
+      const local = getSubmittedTools().find(t => t.slug === slug || t.id === slug);
+      if (local) {
+        setTool({ ...local, long_description: null, benefits: null } as unknown as Tool);
+        document.title = `${local.title} — AI Tool | PixelNova AI`;
+        return;
+      }
       let { data } = await supabase.from("offers").select("*").eq("slug", slug).maybeSingle();
       if (!data) {
         const r = await supabase.from("offers").select("*").eq("id", slug).maybeSingle();

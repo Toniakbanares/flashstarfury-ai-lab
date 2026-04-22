@@ -14,6 +14,8 @@ import { shareLink } from "@/lib/share";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToolLikes } from "@/hooks/useToolLikes";
+import { getSubmittedTools, savedToolsStore, STORE_EVENT } from "@/lib/localStore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Tool = {
   id: string; slug: string | null; title: string; description: string;
@@ -53,25 +55,45 @@ const Tools = () => {
     const meta = document.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute("content", "Discover the best AI tools — image, video, writing, automation, marketing & income. Curated marketplace by PixelNova AI.");
     supabase.from("offers").select("*").eq("is_active", true)
-      .then(({ data }) => { setTools((data as Tool[]) ?? []); setLoading(false); });
+      .then(({ data }) => {
+        const remote = (data as Tool[]) ?? [];
+        const local = getSubmittedTools() as unknown as Tool[];
+        setTools([...local, ...remote]);
+        setLoading(false);
+      });
+    const onStore = () => {
+      setTools(prev => {
+        const remote = prev.filter(t => !t.id.startsWith("local_"));
+        const local = getSubmittedTools() as unknown as Tool[];
+        return [...local, ...remote];
+      });
+    };
+    window.addEventListener(STORE_EVENT, onStore);
+    return () => window.removeEventListener(STORE_EVENT, onStore);
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    supabase.from("saved_offers").select("offer_id").eq("user_id", user.id)
-      .then(({ data }) => setSaved(new Set((data ?? []).map(d => d.offer_id))));
+    if (user) {
+      supabase.from("saved_offers").select("offer_id").eq("user_id", user.id)
+        .then(({ data }) => {
+          const remote = new Set((data ?? []).map(d => d.offer_id));
+          const local = savedToolsStore.get();
+          local.forEach(id => remote.add(id));
+          setSaved(remote);
+        });
+    } else {
+      setSaved(savedToolsStore.get());
+    }
   }, [user]);
 
   const toggleSave = async (id: string) => {
-    if (!user) { toast({ title: "Faça login para salvar" }); return; }
-    if (saved.has(id)) {
-      await supabase.from("saved_offers").delete().eq("user_id", user.id).eq("offer_id", id);
-      setSaved(prev => { const n = new Set(prev); n.delete(id); return n; });
-    } else {
-      await supabase.from("saved_offers").insert({ user_id: user.id, offer_id: id });
-      setSaved(prev => new Set(prev).add(id));
-      toast({ title: "Salva nos favoritos ✨" });
+    const next = savedToolsStore.toggle(id);
+    setSaved(new Set(next));
+    if (user && !id.startsWith("local_")) {
+      if (next.has(id)) await supabase.from("saved_offers").insert({ user_id: user.id, offer_id: id });
+      else await supabase.from("saved_offers").delete().eq("user_id", user.id).eq("offer_id", id);
     }
+    toast({ title: next.has(id) ? "Saved ✨" : "Removed" });
   };
 
   const handleVisit = (t: Tool) => {
@@ -143,9 +165,7 @@ const Tools = () => {
           </p>
         </div>
         <Button asChild variant="outline" size="sm">
-          <a href="mailto:hello@pixelnova.ai?subject=Submit%20Tool" rel="noopener">
-            <Plus className="h-4 w-4" /> Submit Tool
-          </a>
+          <Link to="/submit"><Plus className="h-4 w-4" /> Submit Tool</Link>
         </Button>
       </header>
 
@@ -215,7 +235,16 @@ const Tools = () => {
 
       {/* Grid */}
       {loading ? (
-        <div className="text-center text-muted-foreground py-12">Loading tools...</div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-5">
+              <Skeleton className="aspect-video w-full mb-3" />
+              <Skeleton className="h-4 w-3/4 mb-2" />
+              <Skeleton className="h-3 w-full mb-1" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center text-muted-foreground py-12">
           No tools match these filters yet.

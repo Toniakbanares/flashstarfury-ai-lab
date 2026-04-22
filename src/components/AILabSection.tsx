@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
-  Image as ImageIcon, Video, Box, User, Sparkles as LogoIcon, FileText,
+  Image as ImageIcon, Video, Box, User, Sparkles, Sparkles as LogoIcon, FileText,
   Send, Loader2, Download, Copy, Repeat, Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";

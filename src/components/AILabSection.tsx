@@ -1,86 +1,127 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
-  Bot, Image, MessageSquare, Wand2, Globe, Send, Loader2, ArrowLeft,
-  Code, FileText, Languages, Music, Mic, Calculator, BookOpen, Palette, Sparkles
+  Image as ImageIcon, Video, Box, User, Sparkles as LogoIcon, FileText,
+  Send, Loader2, Download, Copy, Repeat, Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
-import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
+import { pollinationsImage, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import { supabase } from "@/integrations/supabase/client";
+import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
+import { copyToClipboard } from "@/lib/share";
 
-type Tool = "chat" | "image" | "creative" | "search" | "code" | "summarize" | "translate" | "poem" | null;
+type Mode = "image" | "video" | "3d" | "avatar" | "logo" | "text";
 
-const tools = [
-  { id: "chat" as Tool, icon: MessageSquare, title: "Chat Inteligente", description: "Converse com IA avançada sobre qualquer assunto.", color: "text-accent" },
-  { id: "image" as Tool, icon: Image, title: "Geração de Imagens", description: "Crie imagens incríveis a partir de texto.", color: "text-primary" },
-  { id: "creative" as Tool, icon: Wand2, title: "Assistente Criativo", description: "Escreva textos, roteiros e conteúdo criativo.", color: "text-secondary" },
-  { id: "search" as Tool, icon: Globe, title: "Busca Inteligente", description: "Pesquise informações com IA contextual.", color: "text-glow-blue" },
-  { id: "code" as Tool, icon: Code, title: "Gerador de Código", description: "Gere código em qualquer linguagem de programação.", color: "text-accent" },
-  { id: "summarize" as Tool, icon: FileText, title: "Resumidor de Textos", description: "Resuma artigos, documentos e textos longos.", color: "text-primary" },
-  { id: "translate" as Tool, icon: Languages, title: "Tradutor Universal", description: "Traduza textos entre qualquer idioma.", color: "text-secondary" },
-  { id: "poem" as Tool, icon: BookOpen, title: "Poeta IA", description: "Crie poemas, haikus e textos poéticos.", color: "text-glow-blue" },
+const MODES: { id: Mode; label: string; icon: typeof ImageIcon; hint: string; placeholder: string }[] = [
+  { id: "image",  label: "Image",  icon: ImageIcon, hint: "Generate stunning AI images.",            placeholder: "A cosmic fox painted in watercolor, vibrant nebula background..." },
+  { id: "video",  label: "Video",  icon: Video,     hint: "Create cinematic video previews.",        placeholder: "Slow drone shot over neon Tokyo at night, rain reflections..." },
+  { id: "3d",     label: "3D",     icon: Box,       hint: "Generate rotatable 3D object previews.",  placeholder: "Isometric crystal cube glowing purple, studio lighting..." },
+  { id: "avatar", label: "Avatar", icon: User,      hint: "Square AI portraits & avatars.",          placeholder: "Cyberpunk pilot portrait, neon highlights, sharp focus..." },
+  { id: "logo",   label: "Logo",   icon: LogoIcon,  hint: "Clean transparent-style logos.",          placeholder: "Minimalist logo for 'Nova', star + abstract spark, vector style..." },
+  { id: "text",   label: "Text",   icon: FileText,  hint: "AI-written copy, scripts & ideas.",       placeholder: "Write a viral TikTok hook about productivity..." },
 ];
 
-const modeMap: Record<string, string> = {
-  chat: "chat",
-  creative: "creative",
-  search: "search",
-  code: "code",
-  summarize: "creative",
-  translate: "creative",
-  poem: "creative",
+// Default aspect ratio per mode
+const DEFAULT_RATIO: Record<Mode, string> = {
+  image: "1:1", video: "16:9", "3d": "1:1", avatar: "1:1", logo: "1:1", text: "1:1",
 };
 
-const systemHints: Record<string, string> = {
-  code: "Gere código limpo e bem comentado para: ",
-  summarize: "Resuma o seguinte texto de forma clara e concisa: ",
-  translate: "Traduza o seguinte texto: ",
-  poem: "Escreva um poema criativo sobre: ",
+// Mode → tool_type stored in DB
+const TOOL_TYPE: Record<Mode, string> = {
+  image: "image", video: "video", "3d": "3d", avatar: "avatar", logo: "logo", text: "text",
+};
+
+const PROMPT_BOOSTERS: Record<Mode, (p: string) => string> = {
+  image:  p => p,
+  video:  p => `cinematic film still, motion blur, dynamic composition, ${p}`,
+  "3d":   p => `3D render, isometric, octane render, studio lighting, ${p}`,
+  avatar: p => `professional portrait, sharp focus, centered, ${p}`,
+  logo:   p => `${p}, vector logo, flat design, on solid white background, minimal, iconic`,
+  text:   p => p,
 };
 
 const AILabSection = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { credits, useCredit } = useCredits();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTool, setActiveTool] = useState<Tool>(null);
+  const [searchParams] = useSearchParams();
+
+  const [mode, setMode] = useState<Mode>("image");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [imgModel, setImgModel] = useState<string>("flux");
-  const [imgRatio, setImgRatio] = useState<string>("1:1");
-  const [imgEnhance, setImgEnhance] = useState<boolean>(true);
+  const [progress, setProgress] = useState(0);
   const [lastGenId, setLastGenId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  // Prefill from Explore/Remix/Template query params
+  // Controls
+  const [imgModel, setImgModel] = useState<string>("flux");
+  const [ratio, setRatio] = useState<string>(DEFAULT_RATIO.image);
+  const [creativity, setCreativity] = useState<number[]>([70]);
+  const [quality, setQuality] = useState<number[]>([80]);
+  const [steps, setSteps] = useState<number[]>([30]);
+  const [seed, setSeed] = useState<number[]>([Math.floor(Math.random() * 999999)]);
+
+  // Switch mode → reset ratio default + clear output
+  useEffect(() => {
+    setRatio(DEFAULT_RATIO[mode]);
+    setOutput("");
+    setGeneratedImage(null);
+    setLastGenId(null);
+  }, [mode]);
+
+  // Prefill from query (?tool=image&prompt=...)
   useEffect(() => {
     const t = searchParams.get("tool");
     const p = searchParams.get("prompt");
-    if (t && tools.some(x => x.id === t)) setActiveTool(t as Tool);
+    if (t && MODES.some(m => m.id === t)) setMode(t as Mode);
     if (p) setInput(p);
   }, []);
 
-  const saveGeneration = async (prompt: string, imageUrl: string | null, resultText: string | null, toolType: string) => {
+  const activeMode = useMemo(() => MODES.find(m => m.id === mode)!, [mode]);
+  const activeRatio = useMemo(
+    () => ASPECT_RATIOS.find(r => r.id === ratio) || ASPECT_RATIOS[0],
+    [ratio]
+  );
+
+  // Apply quality slider to output dimensions (50-100% scale)
+  const dims = useMemo(() => {
+    const scale = 0.5 + (quality[0] / 100) * 0.5;
+    return {
+      w: Math.round(activeRatio.w * scale / 8) * 8,
+      h: Math.round(activeRatio.h * scale / 8) * 8,
+    };
+  }, [activeRatio, quality]);
+
+  const saveGeneration = async (prompt: string, imageUrl: string | null, resultText: string | null) => {
     if (!user) return null;
     const { data } = await supabase.from("generations").insert({
       user_id: user.id, prompt, image_url: imageUrl, result_text: resultText,
-      tool_type: toolType, is_public: true,
+      tool_type: TOOL_TYPE[mode], is_public: true,
     }).select("id").maybeSingle();
     return data?.id ?? null;
   };
 
-  const handleSubmit = async () => {
-    if (!input.trim() || isLoading) return;
+  // Smooth fake progress for visual feedback
+  const startProgress = () => {
+    setProgress(5);
+    const id = window.setInterval(() => {
+      setProgress(p => (p >= 92 ? p : p + Math.max(1, (95 - p) * 0.08)));
+    }, 220);
+    return () => window.clearInterval(id);
+  };
 
-    // Credit gate (only for logged users — guests still can try but won't save)
+  const handleGenerate = async () => {
+    if (!input.trim() || isLoading) return;
     if (user && credits <= 0) {
-      toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários. Volte amanhã ou faça upgrade.", variant: "destructive" });
+      toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários.", variant: "destructive" });
       return;
     }
 
@@ -88,181 +129,411 @@ const AILabSection = () => {
     setOutput("");
     setGeneratedImage(null);
     setLastGenId(null);
+    const stop = startProgress();
 
-    if (activeTool === "image") {
-      try {
-        const ratio = ASPECT_RATIOS.find(r => r.id === imgRatio) || ASPECT_RATIOS[0];
-        const url = pollinationsImage(input, {
-          width: ratio.w, height: ratio.h, model: imgModel, enhance: imgEnhance,
-        });
-        await preloadImage(url);
-        setGeneratedImage(url);
-        setOutput(`Imagem gerada! ✨ (${POLLINATIONS_MODELS.find(m => m.id === imgModel)?.name}, ${ratio.name})`);
-        if (user) {
-          await useCredit();
-          const genId = await saveGeneration(input, url, null, "image");
-          if (genId) {
-            setLastGenId(genId);
-            toast({ title: "Adicionada ao Explore ✨", description: "Sua criação agora é pública na galeria." });
-          }
-        }
-      } catch (e) {
-        toast({ title: "Erro", description: "Falha ao gerar imagem. Tente novamente.", variant: "destructive" });
-      }
-      setIsLoading(false);
-    } else {
-      let response = "";
-      const hint = systemHints[activeTool || ""] || "";
-      const userContent = hint ? `${hint}${input}` : input;
-      let gotAnyDelta = false;
+    const enrichedPrompt = PROMPT_BOOSTERS[mode](input);
 
-      await streamChat({
-        messages: [{ role: "user", content: userContent }],
-        mode: modeMap[activeTool || "chat"] || undefined,
-        onDelta: (chunk) => { gotAnyDelta = true; response += chunk; setOutput(response); },
-        onDone: async () => {
-          setIsLoading(false);
-          if (user && response) { await useCredit(); await saveGeneration(input, null, response, activeTool || "chat"); }
-        },
-        onError: async (error) => {
-          if (!gotAnyDelta) {
-            try {
-              const txt = await pollinationsText(userContent, "Você é o Lumy, assistente do PixelNova AI. Responda em português brasileiro com markdown e emojis.");
-              setOutput(txt);
-              if (user) { await useCredit(); await saveGeneration(input, null, txt, activeTool || "chat"); }
-            } catch {
-              toast({ title: "Erro", description: error, variant: "destructive" });
+    try {
+      // ---- Text mode (streaming via Lovable AI) ----
+      if (mode === "text") {
+        let response = "";
+        let gotAny = false;
+        await streamChat({
+          messages: [{ role: "user", content: enrichedPrompt }],
+          mode: "creative",
+          onDelta: (chunk) => { gotAny = true; response += chunk; setOutput(response); },
+          onDone: async () => {
+            stop(); setProgress(100);
+            if (user && response) {
+              await useCredit();
+              const id = await saveGeneration(input, null, response);
+              if (id) setLastGenId(id);
             }
-          } else {
-            toast({ title: "Erro", description: error, variant: "destructive" });
-          }
-          setIsLoading(false);
-        },
+            setIsLoading(false);
+          },
+          onError: async (err) => {
+            stop();
+            if (!gotAny) toast({ title: "Erro", description: err, variant: "destructive" });
+            setIsLoading(false);
+          },
+        });
+        return;
+      }
+
+      // ---- Image-like modes (Image / Avatar / Logo / 3D / Video thumbnail) ----
+      // Creativity → enhance, Seed → reproducibility
+      const url = pollinationsImage(enrichedPrompt, {
+        width: dims.w,
+        height: dims.h,
+        model: mode === "logo" ? "flux" : imgModel,
+        enhance: creativity[0] >= 50,
+        seed: seed[0],
       });
+      await preloadImage(url);
+      stop(); setProgress(100);
+      setGeneratedImage(url);
+
+      const labelMap: Record<Mode, string> = {
+        image: "Imagem gerada", video: "Frame de vídeo gerado", "3d": "Render 3D gerado",
+        avatar: "Avatar gerado", logo: "Logo gerado", text: "",
+      };
+      setOutput(`${labelMap[mode]} ✨ — ${activeRatio.name}, qualidade ${quality[0]}%`);
+
+      if (user) {
+        await useCredit();
+        const id = await saveGeneration(input, url, null);
+        if (id) {
+          setLastGenId(id);
+          toast({ title: "Adicionado ao Explore ✨" });
+        }
+      }
+    } catch (e) {
+      stop();
+      toast({ title: "Erro", description: "Falha ao gerar. Tente novamente.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setProgress(0), 800);
     }
   };
 
-  const placeholders: Record<string, string> = {
-    image: "Descreva a imagem que deseja criar...",
-    code: "Descreva o código que precisa (ex: 'função de login em Python')...",
-    summarize: "Cole o texto que deseja resumir...",
-    translate: "Digite o texto e o idioma destino (ex: 'Hello world → português')...",
-    poem: "Sobre o que você quer um poema?",
+  const handleDownload = async () => {
+    if (generatedImage) {
+      try {
+        const res = await fetch(generatedImage);
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `pixelnova-${mode}-${Date.now()}.${blob.type.includes("png") ? "png" : "jpg"}`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch {
+        window.open(generatedImage, "_blank");
+      }
+    } else if (output) {
+      const blob = new Blob([output], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `pixelnova-text-${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
   };
 
-  if (activeTool) {
-    const tool = tools.find(t => t.id === activeTool)!;
-    return (
-      <section className="py-12 px-4">
-        <div className="container mx-auto max-w-3xl">
-          <button onClick={() => { setActiveTool(null); setOutput(""); setGeneratedImage(null); setInput(""); }}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Voltar ao Laboratório
-          </button>
+  const handleCopy = async () => {
+    const text = output || input;
+    if (!text) return;
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+      toast({ title: "Copiado!" });
+    }
+  };
 
-          <div className="flex items-center gap-3 mb-6">
-            <img src={mascotImg} alt="Lumy" className="h-10 w-10 animate-float" width={40} height={40} />
-            <div>
-              <h2 className="font-heading text-xl font-bold gradient-text">{tool.title}</h2>
-              <p className="text-xs text-muted-foreground">{tool.description}</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-            {activeTool === "image" && (
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Modelo de arte</label>
-                  <select value={imgModel} onChange={e => setImgModel(e.target.value)} disabled={isLoading}
-                    className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border">
-                    {POLLINATIONS_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Aspect ratio</label>
-                  <select value={imgRatio} onChange={e => setImgRatio(e.target.value)} disabled={isLoading}
-                    className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border">
-                    {ASPECT_RATIOS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                    <input type="checkbox" checked={imgEnhance} onChange={e => setImgEnhance(e.target.checked)} disabled={isLoading}
-                      className="w-4 h-4 rounded accent-primary" />
-                    Melhorar prompt (IA)
-                  </label>
-                </div>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input value={input} onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                placeholder={placeholders[activeTool || ""] || "Digite sua pergunta..."}
-                className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none"
-                disabled={isLoading} />
-              <button onClick={handleSubmit} disabled={!input.trim() || isLoading || (user !== null && credits <= 0)}
-                className="p-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 transition-all">
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-              </button>
-            </div>
-            {user && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-primary" /> Custo: 1 crédito • Você tem {credits} restantes hoje
-              </p>
-            )}
-
-            {(output || generatedImage) && (
-              <div className="bg-muted rounded-lg p-4">
-                {generatedImage && <img src={generatedImage} alt="Gerada por IA" className="rounded-lg mb-3 max-w-full" />}
-                {output && (
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                    <ReactMarkdown>{output}</ReactMarkdown>
-                  </div>
-                )}
-                {lastGenId && (
-                  <Link to={`/create/${lastGenId}`} className="inline-block mt-3 text-xs text-primary hover:underline">
-                    Ver na galeria Explore →
-                  </Link>
-                )}
-              </div>
-            )}
-
-            {isLoading && !output && !generatedImage && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground p-4">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {activeTool === "image" ? "Gerando imagem..." : "Processando..."}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const handleRemix = () => {
+    setOutput("");
+    setGeneratedImage(null);
+    setSeed([Math.floor(Math.random() * 999999)]);
+    toast({ title: "Pronto para remixar", description: "Edite o prompt e gere novamente." });
+  };
 
   return (
     <section className="py-12 px-4">
       <div className="container mx-auto max-w-5xl">
+        {/* Brand header — mascot preserved */}
         <div className="flex items-center gap-3 mb-3">
-          <img src={mascotImg} alt="Lumy" className="h-8 w-8 animate-float" width={32} height={32} />
-          <h2 className="font-heading text-2xl font-bold gradient-text">Laboratório de IA</h2>
+          <img src={mascotImg} alt="Lumy" className="h-10 w-10 animate-float" width={40} height={40} />
+          <div>
+            <h2 className="font-heading text-2xl font-bold gradient-text">PixelNova AI Studio</h2>
+            <p className="text-xs text-muted-foreground">{activeMode.hint}</p>
+          </div>
         </div>
-        <p className="text-muted-foreground mb-8 max-w-xl">
-          Explore 8 ferramentas poderosas de inteligência artificial, todas integradas e prontas para uso.
-        </p>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map((tool) => (
-            <button key={tool.id} onClick={() => setActiveTool(tool.id)}
-              className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 text-left">
-              <tool.icon className={`h-7 w-7 mb-3 ${tool.color} transition-transform group-hover:scale-110`} />
-              <h3 className="font-heading text-sm font-semibold mb-1.5 text-card-foreground">{tool.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{tool.description}</p>
-              <span className="inline-block mt-2 text-xs font-semibold text-primary">Usar agora →</span>
+        {/* Mode tabs */}
+        <div className="flex flex-wrap gap-1.5 mb-6 p-1 bg-muted rounded-xl w-fit">
+          {MODES.map(m => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                mode === m.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <m.icon className="h-3.5 w-3.5" /> {m.label}
             </button>
           ))}
         </div>
+
+        <div className="grid lg:grid-cols-[320px,1fr] gap-6">
+          {/* Controls panel */}
+          <aside className="rounded-xl border border-border bg-card p-5 space-y-5 h-fit">
+            {/* Aspect ratio */}
+            {mode !== "text" && (
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block font-medium">Aspect Ratio</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ASPECT_RATIOS.slice(0, 4).map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => setRatio(r.id)}
+                      disabled={isLoading}
+                      className={`px-2 py-1.5 rounded-md text-xs font-medium border transition-all ${
+                        ratio === r.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {r.id}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Model (for image-like modes) */}
+            {mode !== "text" && mode !== "logo" && (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block font-medium">Model</label>
+                <select
+                  value={imgModel} onChange={e => setImgModel(e.target.value)} disabled={isLoading}
+                  className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border"
+                >
+                  {POLLINATIONS_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Sliders */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs text-muted-foreground font-medium">Creativity</label>
+                <span className="text-xs text-primary font-semibold">{creativity[0]}%</span>
+              </div>
+              <Slider value={creativity} onValueChange={setCreativity} max={100} step={1} disabled={isLoading} />
+            </div>
+
+            {mode !== "text" && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-muted-foreground font-medium">Quality</label>
+                  <span className="text-xs text-primary font-semibold">{quality[0]}%</span>
+                </div>
+                <Slider value={quality} onValueChange={setQuality} max={100} step={5} disabled={isLoading} />
+              </div>
+            )}
+
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs text-muted-foreground font-medium">Steps</label>
+                <span className="text-xs text-primary font-semibold">{steps[0]}</span>
+              </div>
+              <Slider value={steps} onValueChange={setSteps} min={10} max={60} step={1} disabled={isLoading} />
+            </div>
+
+            {mode !== "text" && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-muted-foreground font-medium">Seed</label>
+                  <button
+                    onClick={() => setSeed([Math.floor(Math.random() * 999999)])}
+                    disabled={isLoading}
+                    className="text-xs text-primary hover:underline font-semibold"
+                  >
+                    {seed[0]} ↻
+                  </button>
+                </div>
+                <Slider value={seed} onValueChange={setSeed} max={999999} step={1} disabled={isLoading} />
+              </div>
+            )}
+
+            {user && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t border-border">
+                <Sparkles className="h-3 w-3 text-primary" /> 1 crédito • {credits} restantes
+              </p>
+            )}
+          </aside>
+
+          {/* Output area */}
+          <div className="space-y-4">
+            {/* Prompt input */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+                placeholder={activeMode.placeholder}
+                rows={3}
+                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none"
+                disabled={isLoading}
+              />
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-border mt-2">
+                <span className="text-xs text-muted-foreground">
+                  {input.length}/500 chars
+                </span>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!input.trim() || isLoading || (user !== null && credits <= 0)}
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Generate
+                </button>
+              </div>
+              {progress > 0 && (
+                <Progress value={progress} className="h-1 mt-3" />
+              )}
+            </div>
+
+            {/* Output container — respects aspect ratio */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <OutputCanvas
+                mode={mode}
+                ratioId={ratio}
+                image={generatedImage}
+                text={output}
+                isLoading={isLoading}
+              />
+
+              {(generatedImage || output) && !isLoading && (
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+                  <button onClick={handleDownload}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">
+                    <Download className="h-3.5 w-3.5" /> Download
+                  </button>
+                  <button onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">
+                    {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "Copiado" : (output && !generatedImage ? "Copy text" : "Copy prompt")}
+                  </button>
+                  <button onClick={handleRemix}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">
+                    <Repeat className="h-3.5 w-3.5" /> Remix
+                  </button>
+                  {lastGenId && (
+                    <Link to={`/create/${lastGenId}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-xs font-medium text-primary transition ml-auto">
+                      Ver no Explore →
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </section>
+  );
+};
+
+// ---------- Output canvas (respects aspect ratio + mode visuals) ----------
+const OutputCanvas = ({
+  mode, ratioId, image, text, isLoading,
+}: {
+  mode: Mode; ratioId: string; image: string | null; text: string; isLoading: boolean;
+}) => {
+  const ratio = ASPECT_RATIOS.find(r => r.id === ratioId) || ASPECT_RATIOS[0];
+  const aspectStyle = mode === "text"
+    ? undefined
+    : { aspectRatio: `${ratio.w} / ${ratio.h}` };
+
+  // Empty state
+  if (!image && !text && !isLoading) {
+    return (
+      <div
+        style={aspectStyle}
+        className="w-full bg-muted/40 rounded-lg flex flex-col items-center justify-center text-center text-muted-foreground p-6 min-h-[240px]"
+      >
+        <Sparkles className="h-8 w-8 text-primary/40 mb-2" />
+        <p className="text-sm font-medium">Your {mode} preview will appear here</p>
+        <p className="text-xs mt-1">Aspect ratio: {ratio.id}</p>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading && !image && !text) {
+    return (
+      <div
+        style={aspectStyle}
+        className="w-full bg-muted/40 rounded-lg flex flex-col items-center justify-center min-h-[240px] animate-pulse"
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+        <p className="text-xs text-muted-foreground">
+          {mode === "text" ? "Writing..." : `Rendering ${mode}...`}
+        </p>
+      </div>
+    );
+  }
+
+  // Text mode
+  if (mode === "text") {
+    return (
+      <div className="bg-muted/40 rounded-lg p-5 min-h-[180px]">
+        <div className="prose prose-sm dark:prose-invert max-w-none text-sm text-foreground">
+          <ReactMarkdown>{text || ""}</ReactMarkdown>
+        </div>
+      </div>
+    );
+  }
+
+  // Video mode — image as thumbnail with play overlay
+  if (mode === "video" && image) {
+    return (
+      <div style={aspectStyle} className="relative w-full rounded-lg overflow-hidden bg-black group">
+        <img src={image} alt="Video thumbnail" className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-black/30 flex items-center justify-center transition group-hover:bg-black/40">
+          <div className="h-16 w-16 rounded-full bg-primary/90 flex items-center justify-center shadow-2xl">
+            <div className="w-0 h-0 border-y-[12px] border-y-transparent border-l-[18px] border-l-primary-foreground ml-1" />
+          </div>
+        </div>
+        <div className="absolute bottom-3 left-3 right-3 text-xs text-white/90 font-medium drop-shadow">
+          ▶ Video preview • {ratio.id}
+        </div>
+      </div>
+    );
+  }
+
+  // 3D mode — image inside rotating cube wrapper
+  if (mode === "3d" && image) {
+    return (
+      <div style={aspectStyle} className="relative w-full rounded-lg overflow-hidden bg-gradient-to-br from-muted/60 to-muted/20 flex items-center justify-center perspective-[800px]">
+        <div className="relative w-3/4 h-3/4 animate-spin-slow" style={{ transformStyle: "preserve-3d" }}>
+          <img src={image} alt="3D render" className="absolute inset-0 w-full h-full object-cover rounded-lg shadow-2xl shadow-primary/20" />
+        </div>
+        <span className="absolute top-2 left-3 text-[10px] font-semibold uppercase tracking-wider text-primary bg-background/80 px-2 py-0.5 rounded">3D</span>
+      </div>
+    );
+  }
+
+  // Logo mode — checker bg to suggest transparency
+  if (mode === "logo" && image) {
+    return (
+      <div
+        style={aspectStyle}
+        className="w-full rounded-lg overflow-hidden flex items-center justify-center"
+      >
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            backgroundImage:
+              "linear-gradient(45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(-45deg, hsl(var(--muted)) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, hsl(var(--muted)) 75%), linear-gradient(-45deg, transparent 75%, hsl(var(--muted)) 75%)",
+            backgroundSize: "20px 20px",
+            backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0",
+          }}
+        >
+          <img src={image} alt="Logo" className="max-w-[80%] max-h-[80%] object-contain" />
+        </div>
+      </div>
+    );
+  }
+
+  // Default: image / avatar
+  return (
+    <div style={aspectStyle} className="w-full rounded-lg overflow-hidden bg-muted/40">
+      {image && <img src={image} alt="Generated" className="w-full h-full object-cover" />}
+    </div>
   );
 };
 

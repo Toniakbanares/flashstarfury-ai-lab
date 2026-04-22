@@ -10,9 +10,11 @@ export const TEMPLATES = [
 ] as const;
 
 export const CATEGORY_FILTERS = [
-  { id: "all", label: "Tudo" },
-  { id: "image", label: "Imagens" },
+  { id: "all", label: "All" },
+  { id: "image", label: "Images" },
+  { id: "video", label: "Videos" },
+  { id: "3d", label: "3D" },
+  { id: "avatar", label: "Avatars" },
   { id: "logo", label: "Logos" },
-  { id: "avatar", label: "Personagens" },
-  { id: "art", label: "Arte" },
+  { id: "text", label: "Text" },
 ] as const;

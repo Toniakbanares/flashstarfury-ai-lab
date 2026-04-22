@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark } from "lucide-react";
+import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import mascotImg from "@/assets/mascot.png";
@@ -53,6 +53,9 @@ const AppNavbar = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link to="/submit" className="hidden sm:flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all">
+            <Plus className="h-3.5 w-3.5" /> Submit
+          </Link>
           {user && (
             <div className="flex items-center gap-1 bg-muted rounded-lg px-2.5 py-1.5 text-xs font-medium">
               <Star className="h-3.5 w-3.5 text-primary" />

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Bookmark, ExternalLink } from "lucide-react";
+import { Bookmark, ExternalLink, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { savedToolsStore, getSubmittedTools, STORE_EVENT } from "@/lib/localStore";
+import { toast } from "@/hooks/use-toast";
 
 type Tool = {
   id: string; slug: string | null; title: string; description: string;
@@ -12,22 +14,46 @@ type Tool = {
 };
 
 const Favorites = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const [tools, setTools] = useState<Tool[]>([]);
   const [busy, setBusy] = useState(true);
 
+  const load = async () => {
+    setBusy(true);
+    const localIds = [...savedToolsStore.get()];
+    const submitted = getSubmittedTools().filter(t => localIds.includes(t.id));
+    const remoteIds = localIds.filter(id => !id.startsWith("local_"));
+
+    let remote: Tool[] = [];
+    if (user) {
+      const { data } = await supabase.from("saved_offers")
+        .select("offer_id, offers(*)").eq("user_id", user.id);
+      remote = (data ?? []).map((r: any) => r.offers).filter(Boolean) as Tool[];
+    } else if (remoteIds.length) {
+      const { data } = await supabase.from("offers").select("*").in("id", remoteIds);
+      remote = (data as Tool[]) ?? [];
+    }
+    setTools([...(submitted as unknown as Tool[]), ...remote]);
+    setBusy(false);
+  };
+
   useEffect(() => {
     document.title = "My Favorite AI Tools — PixelNova AI";
-    if (!user) return;
-    supabase.from("saved_offers").select("offer_id, offers(*)").eq("user_id", user.id)
-      .then(({ data }) => {
-        const list = (data ?? []).map((r: any) => r.offers).filter(Boolean) as Tool[];
-        setTools(list);
-        setBusy(false);
-      });
+    load();
+    const onStore = () => load();
+    window.addEventListener(STORE_EVENT, onStore);
+    return () => window.removeEventListener(STORE_EVENT, onStore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  if (!loading && !user) return <Navigate to="/auth" replace />;
+  const removeFav = async (id: string) => {
+    savedToolsStore.remove(id);
+    if (user && !id.startsWith("local_")) {
+      await supabase.from("saved_offers").delete().eq("user_id", user.id).eq("offer_id", id);
+    }
+    setTools(prev => prev.filter(t => t.id !== id));
+    toast({ title: "Removed from favorites" });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -64,8 +90,8 @@ const Favorites = () => {
                 <Button asChild size="sm" className="flex-1">
                   <a href={t.url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3" />Visit</a>
                 </Button>
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/tool/${t.slug || t.id}`}>Details</Link>
+                <Button size="sm" variant="outline" onClick={() => removeFav(t.id)} aria-label="Remove">
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </article>

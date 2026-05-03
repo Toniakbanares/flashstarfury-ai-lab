@@ -235,10 +235,17 @@ const AILabSection = () => {
       }
     } catch (e) {
       stop();
-      toast({ title: "Erro", description: "Falha ao gerar. Tente novamente.", variant: "destructive" });
+      const msg = e instanceof Error ? e.message : String(e);
+      let friendly = "Falha ao gerar. Tente novamente em alguns segundos.";
+      if (/Failed to fetch|NetworkError|network/i.test(msg)) friendly = "Sem conexão com o servidor de geração. Verifique sua internet.";
+      else if (/MediaRecorder|captureStream/i.test(msg)) friendly = "Seu navegador não suporta gravação de vídeo. Tente Chrome/Edge atualizado.";
+      else if (/frame|imagem/i.test(msg)) friendly = "Falha ao carregar quadros do vídeo. Tente outro prompt ou diminua a qualidade.";
+      else if (/quota|rate|limit|429/i.test(msg)) friendly = "Limite de geração atingido. Aguarde 1 minuto.";
+      toast({ title: "Erro ao gerar", description: friendly, variant: "destructive" });
+      console.error("[Studio] generation error:", e);
     } finally {
       setIsLoading(false);
-      setTimeout(() => setProgress(0), 800);
+      setTimeout(() => { setProgress(0); setProgressLabel(""); }, 800);
     }
   };
 

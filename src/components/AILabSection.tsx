@@ -235,6 +235,13 @@ const AILabSection = () => {
   };
 
   const handleDownload = async () => {
+    if (generatedVideo) {
+      const a = document.createElement("a");
+      a.href = generatedVideo.url;
+      a.download = `pixelnova-video-${Date.now()}.webm`;
+      a.click();
+      return;
+    }
     if (generatedImage) {
       try {
         const res = await fetch(generatedImage);

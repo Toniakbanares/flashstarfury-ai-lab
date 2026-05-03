@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
 import { pollinationsImage, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
+import { generateVideo } from "@/lib/freevideo";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
@@ -56,8 +57,10 @@ const AILabSection = () => {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedVideo, setGeneratedVideo] = useState<{ url: string; poster: string; mime: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [lastGenId, setLastGenId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -74,6 +77,8 @@ const AILabSection = () => {
     setRatio(DEFAULT_RATIO[mode]);
     setOutput("");
     setGeneratedImage(null);
+    if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
+    setGeneratedVideo(null);
     setLastGenId(null);
   }, [mode]);
 
@@ -128,8 +133,11 @@ const AILabSection = () => {
     setIsLoading(true);
     setOutput("");
     setGeneratedImage(null);
+    if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
+    setGeneratedVideo(null);
     setLastGenId(null);
-    const stop = startProgress();
+    setProgressLabel(mode === "video" ? "Iniciando geração de vídeo..." : "");
+    const stop = mode === "video" ? () => {} : startProgress();
 
     const enrichedPrompt = PROMPT_BOOSTERS[mode](input);
 
@@ -160,7 +168,37 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- Image-like modes (Image / Avatar / Logo / 3D / Video thumbnail) ----
+      // ---- Video mode (real .webm via Canvas + MediaRecorder) ----
+      if (mode === "video") {
+        const result = await generateVideo(enrichedPrompt, {
+          width: dims.w,
+          height: dims.h,
+          seed: seed[0],
+          model: imgModel,
+          enhance: creativity[0] >= 50,
+          frames: Math.max(3, Math.min(8, Math.round(steps[0] / 8))),
+          durationMs: 5000,
+          fps: 30,
+          onProgress: (pct, label) => {
+            setProgress(pct);
+            setProgressLabel(label);
+          },
+        });
+        setProgress(100);
+        setGeneratedVideo({ url: result.url, poster: result.posterUrl, mime: result.mime });
+        setOutput(`Vídeo gerado ✨ — ${activeRatio.name}, ~5s`);
+        if (user) {
+          await useCredit();
+          const id = await saveGeneration(input, result.posterUrl, null);
+          if (id) {
+            setLastGenId(id);
+            toast({ title: "Adicionado ao Explore ✨" });
+          }
+        }
+        return;
+      }
+
+      // ---- Image-like modes (Image / Avatar / Logo / 3D) ----
       // Creativity → enhance, Seed → reproducibility
       const url = pollinationsImage(enrichedPrompt, {
         width: dims.w,
@@ -174,7 +212,7 @@ const AILabSection = () => {
       setGeneratedImage(url);
 
       const labelMap: Record<Mode, string> = {
-        image: "Imagem gerada", video: "Frame de vídeo gerado", "3d": "Render 3D gerado",
+        image: "Imagem gerada", video: "Vídeo gerado", "3d": "Render 3D gerado",
         avatar: "Avatar gerado", logo: "Logo gerado", text: "",
       };
       setOutput(`${labelMap[mode]} ✨ — ${activeRatio.name}, qualidade ${quality[0]}%`);
@@ -197,6 +235,13 @@ const AILabSection = () => {
   };
 
   const handleDownload = async () => {
+    if (generatedVideo) {
+      const a = document.createElement("a");
+      a.href = generatedVideo.url;
+      a.download = `pixelnova-video-${Date.now()}.webm`;
+      a.click();
+      return;
+    }
     if (generatedImage) {
       try {
         const res = await fetch(generatedImage);
@@ -233,6 +278,8 @@ const AILabSection = () => {
   const handleRemix = () => {
     setOutput("");
     setGeneratedImage(null);
+    if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
+    setGeneratedVideo(null);
     setSeed([Math.floor(Math.random() * 999999)]);
     toast({ title: "Pronto para remixar", description: "Edite o prompt e gere novamente." });
   };
@@ -382,7 +429,12 @@ const AILabSection = () => {
                 </button>
               </div>
               {progress > 0 && (
-                <Progress value={progress} className="h-1 mt-3" />
+                <div className="mt-3 space-y-1">
+                  <Progress value={progress} className="h-1" />
+                  {progressLabel && (
+                    <p className="text-[10px] text-muted-foreground">{progressLabel}</p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -392,11 +444,12 @@ const AILabSection = () => {
                 mode={mode}
                 ratioId={ratio}
                 image={generatedImage}
+                video={generatedVideo}
                 text={output}
                 isLoading={isLoading}
               />
 
-              {(generatedImage || output) && !isLoading && (
+              {(generatedImage || generatedVideo || output) && !isLoading && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
                   <button onClick={handleDownload}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">
@@ -429,9 +482,11 @@ const AILabSection = () => {
 
 // ---------- Output canvas (respects aspect ratio + mode visuals) ----------
 const OutputCanvas = ({
-  mode, ratioId, image, text, isLoading,
+  mode, ratioId, image, video, text, isLoading,
 }: {
-  mode: Mode; ratioId: string; image: string | null; text: string; isLoading: boolean;
+  mode: Mode; ratioId: string; image: string | null;
+  video: { url: string; poster: string; mime: string } | null;
+  text: string; isLoading: boolean;
 }) => {
   const ratio = ASPECT_RATIOS.find(r => r.id === ratioId) || ASPECT_RATIOS[0];
   const aspectStyle = mode === "text"
@@ -439,7 +494,7 @@ const OutputCanvas = ({
     : { aspectRatio: `${ratio.w} / ${ratio.h}` };
 
   // Empty state
-  if (!image && !text && !isLoading) {
+  if (!image && !video && !text && !isLoading) {
     return (
       <div
         style={aspectStyle}
@@ -453,7 +508,7 @@ const OutputCanvas = ({
   }
 
   // Loading state
-  if (isLoading && !image && !text) {
+  if (isLoading && !image && !video && !text) {
     return (
       <div
         style={aspectStyle}
@@ -478,19 +533,20 @@ const OutputCanvas = ({
     );
   }
 
-  // Video mode — image as thumbnail with play overlay
-  if (mode === "video" && image) {
+  // Video mode — real <video> player
+  if (mode === "video" && video) {
     return (
-      <div style={aspectStyle} className="relative w-full rounded-lg overflow-hidden bg-black group">
-        <img src={image} alt="Video thumbnail" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center transition group-hover:bg-black/40">
-          <div className="h-16 w-16 rounded-full bg-primary/90 flex items-center justify-center shadow-2xl">
-            <div className="w-0 h-0 border-y-[12px] border-y-transparent border-l-[18px] border-l-primary-foreground ml-1" />
-          </div>
-        </div>
-        <div className="absolute bottom-3 left-3 right-3 text-xs text-white/90 font-medium drop-shadow">
-          ▶ Video preview • {ratio.id}
-        </div>
+      <div style={aspectStyle} className="relative w-full rounded-lg overflow-hidden bg-black">
+        <video
+          src={video.url}
+          poster={video.poster}
+          controls
+          autoPlay
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+        />
+        <span className="absolute top-2 left-3 text-[10px] font-semibold uppercase tracking-wider text-primary bg-background/80 px-2 py-0.5 rounded">Video • {ratio.id}</span>
       </div>
     );
   }

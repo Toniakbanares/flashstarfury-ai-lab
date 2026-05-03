@@ -6,7 +6,6 @@ export const POLLINATIONS_MODELS = [
   { id: "flux-realism", name: "Flux Realism" },
   { id: "flux-anime", name: "Flux Anime" },
   { id: "flux-3d", name: "Flux 3D" },
-  { id: "any-dark", name: "Any Dark (Sombrio)" },
   { id: "turbo", name: "Turbo (Rápido)" },
 ] as const;
 

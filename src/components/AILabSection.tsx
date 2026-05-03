@@ -57,8 +57,10 @@ const AILabSection = () => {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedVideo, setGeneratedVideo] = useState<{ url: string; poster: string; mime: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [lastGenId, setLastGenId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 

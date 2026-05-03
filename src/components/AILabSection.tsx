@@ -482,9 +482,11 @@ const AILabSection = () => {
 
 // ---------- Output canvas (respects aspect ratio + mode visuals) ----------
 const OutputCanvas = ({
-  mode, ratioId, image, text, isLoading,
+  mode, ratioId, image, video, text, isLoading,
 }: {
-  mode: Mode; ratioId: string; image: string | null; text: string; isLoading: boolean;
+  mode: Mode; ratioId: string; image: string | null;
+  video: { url: string; poster: string; mime: string } | null;
+  text: string; isLoading: boolean;
 }) => {
   const ratio = ASPECT_RATIOS.find(r => r.id === ratioId) || ASPECT_RATIOS[0];
   const aspectStyle = mode === "text"
@@ -492,7 +494,7 @@ const OutputCanvas = ({
     : { aspectRatio: `${ratio.w} / ${ratio.h}` };
 
   // Empty state
-  if (!image && !text && !isLoading) {
+  if (!image && !video && !text && !isLoading) {
     return (
       <div
         style={aspectStyle}
@@ -506,7 +508,7 @@ const OutputCanvas = ({
   }
 
   // Loading state
-  if (isLoading && !image && !text) {
+  if (isLoading && !image && !video && !text) {
     return (
       <div
         style={aspectStyle}
@@ -531,19 +533,20 @@ const OutputCanvas = ({
     );
   }
 
-  // Video mode — image as thumbnail with play overlay
-  if (mode === "video" && image) {
+  // Video mode — real <video> player
+  if (mode === "video" && video) {
     return (
-      <div style={aspectStyle} className="relative w-full rounded-lg overflow-hidden bg-black group">
-        <img src={image} alt="Video thumbnail" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center transition group-hover:bg-black/40">
-          <div className="h-16 w-16 rounded-full bg-primary/90 flex items-center justify-center shadow-2xl">
-            <div className="w-0 h-0 border-y-[12px] border-y-transparent border-l-[18px] border-l-primary-foreground ml-1" />
-          </div>
-        </div>
-        <div className="absolute bottom-3 left-3 right-3 text-xs text-white/90 font-medium drop-shadow">
-          ▶ Video preview • {ratio.id}
-        </div>
+      <div style={aspectStyle} className="relative w-full rounded-lg overflow-hidden bg-black">
+        <video
+          src={video.url}
+          poster={video.poster}
+          controls
+          autoPlay
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+        />
+        <span className="absolute top-2 left-3 text-[10px] font-semibold uppercase tracking-wider text-primary bg-background/80 px-2 py-0.5 rounded">Video • {ratio.id}</span>
       </div>
     );
   }

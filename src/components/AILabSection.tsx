@@ -125,10 +125,19 @@ const AILabSection = () => {
 
   const handleGenerate = async () => {
     if (!input.trim() || isLoading) return;
+    if (input.length > 500) {
+      toast({ title: "Prompt muito longo", description: "Máximo 500 caracteres.", variant: "destructive" });
+      return;
+    }
     if (user && credits <= 0) {
       toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários.", variant: "destructive" });
       return;
     }
+
+    // Always use a fresh seed per generation so a new click always produces
+    // a new result (even with same prompt) — no page refresh needed.
+    const freshSeed = Math.floor(Math.random() * 999999);
+    setSeed([freshSeed]);
 
     setIsLoading(true);
     setOutput("");
@@ -161,7 +170,11 @@ const AILabSection = () => {
           },
           onError: async (err) => {
             stop();
-            if (!gotAny) toast({ title: "Erro", description: err, variant: "destructive" });
+            setProgress(0);
+            if (!gotAny) {
+              const friendly = /rate|429|limit/i.test(err) ? "Limite de uso atingido. Aguarde 1 minuto." : err || "Falha no chat.";
+              toast({ title: "Erro ao gerar texto", description: friendly, variant: "destructive" });
+            }
             setIsLoading(false);
           },
         });
@@ -170,10 +183,13 @@ const AILabSection = () => {
 
       // ---- Video mode (real .webm via Canvas + MediaRecorder) ----
       if (mode === "video") {
+        if (typeof MediaRecorder === "undefined") {
+          throw new Error("MediaRecorder não suportado neste navegador.");
+        }
         const result = await generateVideo(enrichedPrompt, {
           width: dims.w,
           height: dims.h,
-          seed: seed[0],
+          seed: freshSeed,
           model: imgModel,
           enhance: creativity[0] >= 50,
           frames: Math.max(3, Math.min(8, Math.round(steps[0] / 8))),
@@ -199,13 +215,12 @@ const AILabSection = () => {
       }
 
       // ---- Image-like modes (Image / Avatar / Logo / 3D) ----
-      // Creativity → enhance, Seed → reproducibility
       const url = pollinationsImage(enrichedPrompt, {
         width: dims.w,
         height: dims.h,
         model: mode === "logo" ? "flux" : imgModel,
         enhance: creativity[0] >= 50,
-        seed: seed[0],
+        seed: freshSeed,
       });
       await preloadImage(url);
       stop(); setProgress(100);
@@ -227,10 +242,17 @@ const AILabSection = () => {
       }
     } catch (e) {
       stop();
-      toast({ title: "Erro", description: "Falha ao gerar. Tente novamente.", variant: "destructive" });
+      const msg = e instanceof Error ? e.message : String(e);
+      let friendly = "Falha ao gerar. Tente novamente em alguns segundos.";
+      if (/Failed to fetch|NetworkError|network/i.test(msg)) friendly = "Sem conexão com o servidor de geração. Verifique sua internet.";
+      else if (/MediaRecorder|captureStream/i.test(msg)) friendly = "Seu navegador não suporta gravação de vídeo. Tente Chrome/Edge atualizado.";
+      else if (/frame|imagem/i.test(msg)) friendly = "Falha ao carregar quadros do vídeo. Tente outro prompt ou diminua a qualidade.";
+      else if (/quota|rate|limit|429/i.test(msg)) friendly = "Limite de geração atingido. Aguarde 1 minuto.";
+      toast({ title: "Erro ao gerar", description: friendly, variant: "destructive" });
+      console.error("[Studio] generation error:", e);
     } finally {
       setIsLoading(false);
-      setTimeout(() => setProgress(0), 800);
+      setTimeout(() => { setProgress(0); setProgressLabel(""); }, 800);
     }
   };
 
@@ -245,22 +267,29 @@ const AILabSection = () => {
     if (generatedImage) {
       try {
         const res = await fetch(generatedImage);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = `pixelnova-${mode}-${Date.now()}.${blob.type.includes("png") ? "png" : "jpg"}`;
         a.click();
         URL.revokeObjectURL(a.href);
-      } catch {
+      } catch (err) {
+        console.warn("download fallback:", err);
         window.open(generatedImage, "_blank");
+        toast({ title: "Download via nova aba", description: "Salve clicando com o botão direito na imagem." });
       }
     } else if (output) {
-      const blob = new Blob([output], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `pixelnova-text-${Date.now()}.txt`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      try {
+        const blob = new Blob([output], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `pixelnova-text-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (err) {
+        toast({ title: "Erro ao baixar", description: "Não foi possível gerar o arquivo.", variant: "destructive" });
+      }
     }
   };
 

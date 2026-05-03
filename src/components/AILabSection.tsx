@@ -429,7 +429,12 @@ const AILabSection = () => {
                 </button>
               </div>
               {progress > 0 && (
-                <Progress value={progress} className="h-1 mt-3" />
+                <div className="mt-3 space-y-1">
+                  <Progress value={progress} className="h-1" />
+                  {progressLabel && (
+                    <p className="text-[10px] text-muted-foreground">{progressLabel}</p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -439,11 +444,12 @@ const AILabSection = () => {
                 mode={mode}
                 ratioId={ratio}
                 image={generatedImage}
+                video={generatedVideo}
                 text={output}
                 isLoading={isLoading}
               />
 
-              {(generatedImage || output) && !isLoading && (
+              {(generatedImage || generatedVideo || output) && !isLoading && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
                   <button onClick={handleDownload}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">

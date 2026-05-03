@@ -179,6 +179,9 @@ const AILabSection = () => {
 
       // ---- Video mode (real .webm via Canvas + MediaRecorder) ----
       if (mode === "video") {
+        if (typeof MediaRecorder === "undefined") {
+          throw new Error("MediaRecorder não suportado neste navegador.");
+        }
         const result = await generateVideo(enrichedPrompt, {
           width: dims.w,
           height: dims.h,

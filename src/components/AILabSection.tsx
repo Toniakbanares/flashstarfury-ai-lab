@@ -125,10 +125,19 @@ const AILabSection = () => {
 
   const handleGenerate = async () => {
     if (!input.trim() || isLoading) return;
+    if (input.length > 500) {
+      toast({ title: "Prompt muito longo", description: "Máximo 500 caracteres.", variant: "destructive" });
+      return;
+    }
     if (user && credits <= 0) {
       toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários.", variant: "destructive" });
       return;
     }
+
+    // Always use a fresh seed per generation so a new click always produces
+    // a new result (even with same prompt) — no page refresh needed.
+    const freshSeed = Math.floor(Math.random() * 999999);
+    setSeed([freshSeed]);
 
     setIsLoading(true);
     setOutput("");

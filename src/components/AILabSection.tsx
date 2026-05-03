@@ -77,6 +77,8 @@ const AILabSection = () => {
     setRatio(DEFAULT_RATIO[mode]);
     setOutput("");
     setGeneratedImage(null);
+    if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
+    setGeneratedVideo(null);
     setLastGenId(null);
   }, [mode]);
 

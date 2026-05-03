@@ -260,22 +260,29 @@ const AILabSection = () => {
     if (generatedImage) {
       try {
         const res = await fetch(generatedImage);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = `pixelnova-${mode}-${Date.now()}.${blob.type.includes("png") ? "png" : "jpg"}`;
         a.click();
         URL.revokeObjectURL(a.href);
-      } catch {
+      } catch (err) {
+        console.warn("download fallback:", err);
         window.open(generatedImage, "_blank");
+        toast({ title: "Download via nova aba", description: "Salve clicando com o botão direito na imagem." });
       }
     } else if (output) {
-      const blob = new Blob([output], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `pixelnova-text-${Date.now()}.txt`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      try {
+        const blob = new Blob([output], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `pixelnova-text-${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (err) {
+        toast({ title: "Erro ao baixar", description: "Não foi possível gerar o arquivo.", variant: "destructive" });
+      }
     }
   };
 

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { TrendingUp, Clock, Flame, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLikes } from "@/hooks/useLikes";
-import { TEMPLATES, CATEGORY_FILTERS } from "@/lib/templates";
+import { CATEGORY_FILTERS } from "@/lib/templates";
 import CreationCard from "@/components/CreationCard";
 
 type Tab = "trending" | "latest" | "popular";

@@ -170,7 +170,11 @@ const AILabSection = () => {
           },
           onError: async (err) => {
             stop();
-            if (!gotAny) toast({ title: "Erro", description: err, variant: "destructive" });
+            setProgress(0);
+            if (!gotAny) {
+              const friendly = /rate|429|limit/i.test(err) ? "Limite de uso atingido. Aguarde 1 minuto." : err || "Falha no chat.";
+              toast({ title: "Erro ao gerar texto", description: friendly, variant: "destructive" });
+            }
             setIsLoading(false);
           },
         });

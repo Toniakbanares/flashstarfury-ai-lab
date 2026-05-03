@@ -168,7 +168,37 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- Image-like modes (Image / Avatar / Logo / 3D / Video thumbnail) ----
+      // ---- Video mode (real .webm via Canvas + MediaRecorder) ----
+      if (mode === "video") {
+        const result = await generateVideo(enrichedPrompt, {
+          width: dims.w,
+          height: dims.h,
+          seed: seed[0],
+          model: imgModel,
+          enhance: creativity[0] >= 50,
+          frames: Math.max(3, Math.min(8, Math.round(steps[0] / 8))),
+          durationMs: 5000,
+          fps: 30,
+          onProgress: (pct, label) => {
+            setProgress(pct);
+            setProgressLabel(label);
+          },
+        });
+        setProgress(100);
+        setGeneratedVideo({ url: result.url, poster: result.posterUrl, mime: result.mime });
+        setOutput(`Vídeo gerado ✨ — ${activeRatio.name}, ~5s`);
+        if (user) {
+          await useCredit();
+          const id = await saveGeneration(input, result.posterUrl, null);
+          if (id) {
+            setLastGenId(id);
+            toast({ title: "Adicionado ao Explore ✨" });
+          }
+        }
+        return;
+      }
+
+      // ---- Image-like modes (Image / Avatar / Logo / 3D) ----
       // Creativity → enhance, Seed → reproducibility
       const url = pollinationsImage(enrichedPrompt, {
         width: dims.w,
@@ -182,7 +212,7 @@ const AILabSection = () => {
       setGeneratedImage(url);
 
       const labelMap: Record<Mode, string> = {
-        image: "Imagem gerada", video: "Frame de vídeo gerado", "3d": "Render 3D gerado",
+        image: "Imagem gerada", video: "Vídeo gerado", "3d": "Render 3D gerado",
         avatar: "Avatar gerado", logo: "Logo gerado", text: "",
       };
       setOutput(`${labelMap[mode]} ✨ — ${activeRatio.name}, qualidade ${quality[0]}%`);

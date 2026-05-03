@@ -95,19 +95,7 @@ const Explore = () => {
         <p className="text-sm text-muted-foreground">Explore, curta e remixe criações da comunidade PixelNova AI.</p>
       </header>
 
-      {/* Featured Templates */}
-      <section className="mb-8">
-        <h2 className="font-heading text-sm font-semibold text-foreground mb-3 uppercase tracking-wide">Templates em destaque</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {TEMPLATES.map(t => (
-            <button key={t.id} onClick={() => useTemplate(t.prompt)}
-              className="group rounded-xl border border-border bg-card p-3 text-left hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all">
-              <t.icon className="h-5 w-5 text-primary mb-2 transition-transform group-hover:scale-110" />
-              <p className="text-xs font-semibold text-card-foreground">{t.name}</p>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Templates removed per user request */}
 
       {/* Tabs + filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

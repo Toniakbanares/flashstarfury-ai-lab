@@ -278,6 +278,8 @@ const AILabSection = () => {
   const handleRemix = () => {
     setOutput("");
     setGeneratedImage(null);
+    if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
+    setGeneratedVideo(null);
     setSeed([Math.floor(Math.random() * 999999)]);
     toast({ title: "Pronto para remixar", description: "Edite o prompt e gere novamente." });
   };

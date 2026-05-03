@@ -182,7 +182,7 @@ const AILabSection = () => {
         const result = await generateVideo(enrichedPrompt, {
           width: dims.w,
           height: dims.h,
-          seed: seed[0],
+          seed: freshSeed,
           model: imgModel,
           enhance: creativity[0] >= 50,
           frames: Math.max(3, Math.min(8, Math.round(steps[0] / 8))),
@@ -208,13 +208,12 @@ const AILabSection = () => {
       }
 
       // ---- Image-like modes (Image / Avatar / Logo / 3D) ----
-      // Creativity → enhance, Seed → reproducibility
       const url = pollinationsImage(enrichedPrompt, {
         width: dims.w,
         height: dims.h,
         model: mode === "logo" ? "flux" : imgModel,
         enhance: creativity[0] >= 50,
-        seed: seed[0],
+        seed: freshSeed,
       });
       await preloadImage(url);
       stop(); setProgress(100);

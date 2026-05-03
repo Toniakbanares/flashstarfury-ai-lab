@@ -133,8 +133,11 @@ const AILabSection = () => {
     setIsLoading(true);
     setOutput("");
     setGeneratedImage(null);
+    if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
+    setGeneratedVideo(null);
     setLastGenId(null);
-    const stop = startProgress();
+    setProgressLabel(mode === "video" ? "Iniciando geração de vídeo..." : "");
+    const stop = mode === "video" ? () => {} : startProgress();
 
     const enrichedPrompt = PROMPT_BOOSTERS[mode](input);
 

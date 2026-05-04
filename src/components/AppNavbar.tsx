@@ -18,9 +18,11 @@ const AppNavbar = () => {
   const { user, signOut } = useAuth();
   const { credits } = useCredits();
   const location = useLocation();
+  const [pixOpen, setPixOpen] = useState(false);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <PixSupportModal open={pixOpen} onOpenChange={setPixOpen} />
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
           <img src={mascotImg} alt="PixelNova AI" className="h-8 w-8" width={32} height={32} />

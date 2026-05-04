@@ -592,12 +592,17 @@ const AILabSection = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">
                     <Repeat className="h-3.5 w-3.5" /> Remix
                   </button>
-                  {lastGenId && (
+                  {lastGenId ? (
                     <Link to={`/create/${lastGenId}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-xs font-medium text-primary transition ml-auto">
                       Ver no Explore →
                     </Link>
-                  )}
+                  ) : lastLocalId ? (
+                    <Link to="/explore"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-xs font-medium text-primary transition ml-auto">
+                      Ver no Explore →
+                    </Link>
+                  ) : null}
                 </div>
               )}
             </div>

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLikes } from "@/hooks/useLikes";
 import { CATEGORY_FILTERS } from "@/lib/templates";
 import CreationCard from "@/components/CreationCard";
+import { getLocalCreations, likeLocalCreation, STORE_EVENT } from "@/lib/localStore";
 
 type Tab = "trending" | "latest" | "popular";
 type Category = typeof CATEGORY_FILTERS[number]["id"];

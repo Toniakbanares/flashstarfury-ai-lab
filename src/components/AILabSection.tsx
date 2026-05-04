@@ -125,13 +125,32 @@ const AILabSection = () => {
     };
   }, [activeRatio, quality]);
 
-  const saveGeneration = async (prompt: string, imageUrl: string | null, resultText: string | null) => {
+  const saveGeneration = async (
+    prompt: string,
+    imageUrl: string | null,
+    resultText: string | null,
+    videoUrl: string | null = null,
+  ) => {
+    // Always save locally so Explore works for guests + as fallback
+    const local = addLocalCreation({
+      prompt,
+      tool_type: TOOL_TYPE[mode] as any,
+      image_url: imageUrl,
+      video_url: videoUrl,
+      result_text: resultText,
+    });
+    setLastLocalId(local.id);
+
     if (!user) return null;
-    const { data } = await supabase.from("generations").insert({
-      user_id: user.id, prompt, image_url: imageUrl, result_text: resultText,
-      tool_type: TOOL_TYPE[mode], is_public: true,
-    }).select("id").maybeSingle();
-    return data?.id ?? null;
+    try {
+      const { data } = await supabase.from("generations").insert({
+        user_id: user.id, prompt, image_url: imageUrl, result_text: resultText,
+        tool_type: TOOL_TYPE[mode], is_public: true,
+      }).select("id").maybeSingle();
+      return data?.id ?? null;
+    } catch {
+      return null;
+    }
   };
 
   // Smooth fake progress for visual feedback
@@ -149,13 +168,16 @@ const AILabSection = () => {
       toast({ title: "Prompt muito longo", description: "Máximo 500 caracteres.", variant: "destructive" });
       return;
     }
-    if (user && credits <= 0) {
-      toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários.", variant: "destructive" });
+    if (credits <= 0) {
+      toast({
+        title: "Sem créditos",
+        description: "Você usou seus 5 créditos diários. Apoie via Pix para receber +50 bônus.",
+        variant: "destructive",
+      });
+      setPixOpen(true);
       return;
     }
 
-    // Always use a fresh seed per generation so a new click always produces
-    // a new result (even with same prompt) — no page refresh needed.
     const freshSeed = Math.floor(Math.random() * 999999);
     setSeed([freshSeed]);
 
@@ -165,46 +187,76 @@ const AILabSection = () => {
     if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
     setGeneratedVideo(null);
     setLastGenId(null);
+    setLastLocalId(null);
     setProgressLabel(mode === "video" ? "Iniciando geração de vídeo..." : "");
     const stop = mode === "video" ? () => {} : startProgress();
 
     const enrichedPrompt = PROMPT_BOOSTERS[mode](input);
 
     try {
-      // ---- Text mode (streaming via Lovable AI) ----
+      // ---- Text mode (streaming via Lovable AI → fallback Pollinations text → mock) ----
       if (mode === "text") {
         let response = "";
         let gotAny = false;
-        await streamChat({
-          messages: [{ role: "user", content: enrichedPrompt }],
-          mode: "creative",
-          onDelta: (chunk) => { gotAny = true; response += chunk; setOutput(response); },
-          onDone: async () => {
-            stop(); setProgress(100);
-            if (user && response) {
-              await useCredit();
-              const id = await saveGeneration(input, null, response);
-              if (id) setLastGenId(id);
-            }
-            setIsLoading(false);
-          },
-          onError: async (err) => {
-            stop();
-            setProgress(0);
-            if (!gotAny) {
-              const friendly = /rate|429|limit/i.test(err) ? "Limite de uso atingido. Aguarde 1 minuto." : err || "Falha no chat.";
-              toast({ title: "Erro ao gerar texto", description: friendly, variant: "destructive" });
-            }
-            setIsLoading(false);
-          },
+        let streamFailed = false;
+
+        await new Promise<void>((resolve) => {
+          streamChat({
+            messages: [{ role: "user", content: enrichedPrompt }],
+            mode: "creative",
+            onDelta: (chunk) => { gotAny = true; response += chunk; setOutput(response); },
+            onDone: () => resolve(),
+            onError: (err) => {
+              console.warn("[Studio] streamChat failed:", err);
+              streamFailed = true;
+              resolve();
+            },
+          });
         });
+
+        if (!gotAny) {
+          // Fallback: pollinations text
+          try {
+            setProgressLabel("Tentando provedor alternativo...");
+            response = await pollinationsText(enrichedPrompt);
+            setOutput(response);
+          } catch (e) {
+            console.warn("[Studio] pollinations text failed, using mock:", e);
+            response = mockText(input);
+            setOutput(response);
+            toast({ title: "Modo offline", description: "Usando rascunho local — APIs indisponíveis." });
+          }
+        } else if (streamFailed && !response) {
+          response = mockText(input);
+          setOutput(response);
+        }
+
+        stop(); setProgress(100);
+        await useCredit();
+        const id = await saveGeneration(input, null, response);
+        if (id) setLastGenId(id);
+        toast({ title: "Adicionado ao Explore ✨" });
         return;
       }
 
-      // ---- Video mode (real .webm via Canvas + MediaRecorder) ----
+      // ---- Video mode (real .webm via Canvas + MediaRecorder, fallback to image card) ----
       if (mode === "video") {
         if (typeof MediaRecorder === "undefined") {
-          throw new Error("MediaRecorder não suportado neste navegador.");
+          // Fallback: render an image card as "video thumbnail"
+          toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
+          const url = pollinationsImage(enrichedPrompt, {
+            width: dims.w, height: dims.h, model: imgModel,
+            enhance: creativity[0] >= 50, seed: freshSeed,
+          });
+          await preloadImage(url);
+          setProgress(100);
+          setGeneratedImage(url);
+          setOutput(`Preview de vídeo (estático) ✨ — ${activeRatio.name}`);
+          await useCredit();
+          const id = await saveGeneration(input, url, null);
+          if (id) setLastGenId(id);
+          toast({ title: "Adicionado ao Explore ✨" });
+          return;
         }
         const result = await generateVideo(enrichedPrompt, {
           width: dims.w,
@@ -223,14 +275,10 @@ const AILabSection = () => {
         setProgress(100);
         setGeneratedVideo({ url: result.url, poster: result.posterUrl, mime: result.mime });
         setOutput(`Vídeo gerado ✨ — ${activeRatio.name}, ~5s`);
-        if (user) {
-          await useCredit();
-          const id = await saveGeneration(input, result.posterUrl, null);
-          if (id) {
-            setLastGenId(id);
-            toast({ title: "Adicionado ao Explore ✨" });
-          }
-        }
+        await useCredit();
+        const id = await saveGeneration(input, result.posterUrl, null, result.url);
+        if (id) setLastGenId(id);
+        toast({ title: "Adicionado ao Explore ✨" });
         return;
       }
 
@@ -242,7 +290,21 @@ const AILabSection = () => {
         enhance: creativity[0] >= 50,
         seed: freshSeed,
       });
-      await preloadImage(url);
+      try {
+        await preloadImage(url);
+      } catch (e) {
+        // Mock fallback: picsum seeded placeholder
+        const fallbackUrl = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
+        await preloadImage(fallbackUrl);
+        toast({ title: "Modo offline", description: "Usando placeholder — provedor de imagem indisponível." });
+        stop(); setProgress(100);
+        setGeneratedImage(fallbackUrl);
+        setOutput(`Placeholder gerado ✨ — ${activeRatio.name}`);
+        await useCredit();
+        const id = await saveGeneration(input, fallbackUrl, null);
+        if (id) setLastGenId(id);
+        return;
+      }
       stop(); setProgress(100);
       setGeneratedImage(url);
 
@@ -252,14 +314,10 @@ const AILabSection = () => {
       };
       setOutput(`${labelMap[mode]} ✨ — ${activeRatio.name}, qualidade ${quality[0]}%`);
 
-      if (user) {
-        await useCredit();
-        const id = await saveGeneration(input, url, null);
-        if (id) {
-          setLastGenId(id);
-          toast({ title: "Adicionado ao Explore ✨" });
-        }
-      }
+      await useCredit();
+      const id = await saveGeneration(input, url, null);
+      if (id) setLastGenId(id);
+      toast({ title: "Adicionado ao Explore ✨" });
     } catch (e) {
       stop();
       const msg = e instanceof Error ? e.message : String(e);

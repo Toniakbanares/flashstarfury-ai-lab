@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Image as ImageIcon, Video, Box, User, Sparkles, Sparkles as LogoIcon, FileText,
-  Send, Loader2, Download, Copy, Repeat, Check,
+  Send, Loader2, Download, Copy, Repeat, Check, Heart, Wand2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
-import { pollinationsImage, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
+import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { generateVideo } from "@/lib/freevideo";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { copyToClipboard } from "@/lib/share";
+import { addLocalCreation } from "@/lib/localStore";
+import PixSupportModal from "@/components/PixSupportModal";
 
 type Mode = "image" | "video" | "3d" | "avatar" | "logo" | "text";
 

@@ -148,13 +148,13 @@ const Explore = () => {
         </div>
       </div>
 
-      {generations.length === 0 && !loading ? (
+      {merged.length === 0 && !loading ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p>Nenhuma criação pública ainda. Seja o primeiro!</p>
+          <p>Nenhuma criação ainda. Seja o primeiro!</p>
         </div>
       ) : (
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
-          {generations.map(gen => (
+          {merged.map(gen => (
             <CreationCard key={gen.id} gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
           ))}
         </div>
@@ -164,7 +164,7 @@ const Explore = () => {
       {loading && (
         <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       )}
-      {!hasMore && generations.length > 0 && (
+      {!hasMore && merged.length > 0 && (
         <p className="text-center text-xs text-muted-foreground py-6">Você chegou ao fim ✨</p>
       )}
     </div>

@@ -397,11 +397,18 @@ const AILabSection = () => {
         {/* Brand header — mascot preserved */}
         <div className="flex items-center gap-3 mb-3">
           <img src={mascotImg} alt="Lumy" className="h-10 w-10 animate-float" width={40} height={40} />
-          <div>
+          <div className="flex-1">
             <h2 className="font-heading text-2xl font-bold gradient-text">PixelNova AI Studio</h2>
             <p className="text-xs text-muted-foreground">{activeMode.hint}</p>
           </div>
+          <button
+            onClick={() => setPixOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/40 bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition"
+          >
+            <Heart className="h-3.5 w-3.5" /> Support / Buy Credits
+          </button>
         </div>
+        <PixSupportModal open={pixOpen} onOpenChange={setPixOpen} />
 
         {/* Mode tabs */}
         <div className="flex flex-wrap gap-1.5 mb-6 p-1 bg-muted rounded-xl w-fit">

@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark, Plus } from "lucide-react";
+import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark, Plus, Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import mascotImg from "@/assets/mascot.png";
+import PixSupportModal from "@/components/PixSupportModal";
 
 const navItems = [
   { path: "/", label: "Home", icon: Sparkles },
@@ -16,9 +18,11 @@ const AppNavbar = () => {
   const { user, signOut } = useAuth();
   const { credits } = useCredits();
   const location = useLocation();
+  const [pixOpen, setPixOpen] = useState(false);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <PixSupportModal open={pixOpen} onOpenChange={setPixOpen} />
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
           <img src={mascotImg} alt="PixelNova AI" className="h-8 w-8" width={32} height={32} />
@@ -53,15 +57,20 @@ const AppNavbar = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPixOpen(true)}
+            className="hidden sm:flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-all"
+            title="Apoie via Pix e ganhe créditos bônus"
+          >
+            <Heart className="h-3.5 w-3.5" /> Buy Credits
+          </button>
           <Link to="/submit" className="hidden sm:flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all">
             <Plus className="h-3.5 w-3.5" /> Submit
           </Link>
-          {user && (
-            <div className="flex items-center gap-1 bg-muted rounded-lg px-2.5 py-1.5 text-xs font-medium">
-              <Star className="h-3.5 w-3.5 text-primary" />
-              <span className="text-foreground">{credits}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1 bg-muted rounded-lg px-2.5 py-1.5 text-xs font-medium">
+            <Star className="h-3.5 w-3.5 text-primary" />
+            <span className="text-foreground">{credits}</span>
+          </div>
           {user ? (
             <button onClick={signOut} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" />

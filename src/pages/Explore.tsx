@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLikes } from "@/hooks/useLikes";
 import { CATEGORY_FILTERS } from "@/lib/templates";
 import CreationCard from "@/components/CreationCard";
+import { getLocalCreations, likeLocalCreation, STORE_EVENT } from "@/lib/localStore";
 
 type Tab = "trending" | "latest" | "popular";
 type Category = typeof CATEGORY_FILTERS[number]["id"];
@@ -16,6 +17,7 @@ const Explore = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [generations, setGenerations] = useState<any[]>([]);
+  const [localCreations, setLocalCreations] = useState<any[]>(() => getLocalCreations());
   const [tab, setTab] = useState<Tab>("trending");
   const [category, setCategory] = useState<Category>("all");
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,31 @@ const Explore = () => {
   const [page, setPage] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const ids = useMemo(() => generations.map(g => g.id), [generations]);
+  // Listen for new local creations
+  useEffect(() => {
+    const refresh = () => setLocalCreations(getLocalCreations());
+    window.addEventListener(STORE_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(STORE_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  // Merge DB + local, dedup by id, apply category filter, sort by tab
+  const merged = useMemo(() => {
+    const all = [...localCreations, ...generations];
+    const filtered = category === "all" ? all : all.filter(g => g.tool_type === category);
+    if (tab === "latest") {
+      return [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    if (tab === "popular" || tab === "trending") {
+      return [...filtered].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+    }
+    return filtered;
+  }, [localCreations, generations, category, tab]);
+
+  const ids = useMemo(() => merged.map(g => g.id), [merged]);
   const { liked, toggle } = useLikes(ids);
 
   const fetchPage = useCallback(async (reset: boolean) => {
@@ -71,7 +97,12 @@ const Explore = () => {
   }, [fetchPage, hasMore, loading]);
 
   const handleLike = async (genId: string) => {
-    const wasLiked = liked.has(genId);
+    // Local creations: bump local likes counter only
+    if (typeof genId === "string" && genId.startsWith("loc_")) {
+      likeLocalCreation(genId);
+      setLocalCreations(getLocalCreations());
+      return;
+    }
     const result = await toggle(genId);
     if (!result) return;
     const delta = result === "liked" ? 1 : -1;
@@ -117,13 +148,13 @@ const Explore = () => {
         </div>
       </div>
 
-      {generations.length === 0 && !loading ? (
+      {merged.length === 0 && !loading ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p>Nenhuma criação pública ainda. Seja o primeiro!</p>
+          <p>Nenhuma criação ainda. Seja o primeiro!</p>
         </div>
       ) : (
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
-          {generations.map(gen => (
+          {merged.map(gen => (
             <CreationCard key={gen.id} gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
           ))}
         </div>
@@ -133,7 +164,7 @@ const Explore = () => {
       {loading && (
         <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       )}
-      {!hasMore && generations.length > 0 && (
+      {!hasMore && merged.length > 0 && (
         <p className="text-center text-xs text-muted-foreground py-6">Você chegou ao fim ✨</p>
       )}
     </div>

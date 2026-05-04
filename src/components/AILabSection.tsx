@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Image as ImageIcon, Video, Box, User, Sparkles, Sparkles as LogoIcon, FileText,
-  Send, Loader2, Download, Copy, Repeat, Check,
+  Send, Loader2, Download, Copy, Repeat, Check, Heart, Wand2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
-import { pollinationsImage, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
+import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { generateVideo } from "@/lib/freevideo";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { copyToClipboard } from "@/lib/share";
+import { addLocalCreation } from "@/lib/localStore";
+import PixSupportModal from "@/components/PixSupportModal";
 
 type Mode = "image" | "video" | "3d" | "avatar" | "logo" | "text";
 
@@ -47,10 +49,26 @@ const PROMPT_BOOSTERS: Record<Mode, (p: string) => string> = {
   text:   p => p,
 };
 
+const QUICK_SUGGESTIONS: Record<Mode, string[]> = {
+  image:  ["cosmic fox in watercolor, nebula background", "cyberpunk Tokyo street, neon rain", "magical forest at sunset, fireflies"],
+  video:  ["drone over neon Tokyo at night", "waves crashing on a black sand beach", "spaceship flying through asteroid field"],
+  "3d":   ["isometric crystal cube glowing purple", "low-poly mountain landscape", "futuristic helmet, studio lighting"],
+  avatar: ["cyberpunk pilot portrait, neon highlights", "fantasy elf warrior, golden hour", "anime hero, vibrant colors"],
+  logo:   ["minimalist logo for 'Nova', star + spark", "coffee shop logo, warm tones", "tech startup logo, geometric"],
+  text:   ["Write a viral TikTok hook about productivity", "Cold email opening for a SaaS pitch", "3 catchy taglines for an AI app"],
+};
+
+// Mock fallbacks when APIs fail
+function mockText(prompt: string): string {
+  const intro = `# About: ${prompt}\n\n`;
+  const body = `Here's a generated draft based on your prompt. While the AI service was unavailable, this placeholder gives you a structure to start from:\n\n- **Hook:** Capture attention in the first sentence about "${prompt}".\n- **Insight:** Share one specific, useful idea.\n- **Action:** End with a clear next step the reader can take today.\n\n_Try again in a moment for a fully AI-written response._`;
+  return intro + body;
+}
+
 const AILabSection = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { credits, useCredit } = useCredits();
+  const { credits, bonus, useCredit } = useCredits();
   const [searchParams] = useSearchParams();
 
   const [mode, setMode] = useState<Mode>("image");
@@ -62,7 +80,9 @@ const AILabSection = () => {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [lastGenId, setLastGenId] = useState<string | null>(null);
+  const [lastLocalId, setLastLocalId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pixOpen, setPixOpen] = useState(false);
 
   // Controls
   const [imgModel, setImgModel] = useState<string>("flux");
@@ -105,13 +125,32 @@ const AILabSection = () => {
     };
   }, [activeRatio, quality]);
 
-  const saveGeneration = async (prompt: string, imageUrl: string | null, resultText: string | null) => {
+  const saveGeneration = async (
+    prompt: string,
+    imageUrl: string | null,
+    resultText: string | null,
+    videoUrl: string | null = null,
+  ) => {
+    // Always save locally so Explore works for guests + as fallback
+    const local = addLocalCreation({
+      prompt,
+      tool_type: TOOL_TYPE[mode] as any,
+      image_url: imageUrl,
+      video_url: videoUrl,
+      result_text: resultText,
+    });
+    setLastLocalId(local.id);
+
     if (!user) return null;
-    const { data } = await supabase.from("generations").insert({
-      user_id: user.id, prompt, image_url: imageUrl, result_text: resultText,
-      tool_type: TOOL_TYPE[mode], is_public: true,
-    }).select("id").maybeSingle();
-    return data?.id ?? null;
+    try {
+      const { data } = await supabase.from("generations").insert({
+        user_id: user.id, prompt, image_url: imageUrl, result_text: resultText,
+        tool_type: TOOL_TYPE[mode], is_public: true,
+      }).select("id").maybeSingle();
+      return data?.id ?? null;
+    } catch {
+      return null;
+    }
   };
 
   // Smooth fake progress for visual feedback
@@ -129,13 +168,16 @@ const AILabSection = () => {
       toast({ title: "Prompt muito longo", description: "Máximo 500 caracteres.", variant: "destructive" });
       return;
     }
-    if (user && credits <= 0) {
-      toast({ title: "Sem créditos", description: "Você usou seus 5 créditos diários.", variant: "destructive" });
+    if (credits <= 0) {
+      toast({
+        title: "Sem créditos",
+        description: "Você usou seus 5 créditos diários. Apoie via Pix para receber +50 bônus.",
+        variant: "destructive",
+      });
+      setPixOpen(true);
       return;
     }
 
-    // Always use a fresh seed per generation so a new click always produces
-    // a new result (even with same prompt) — no page refresh needed.
     const freshSeed = Math.floor(Math.random() * 999999);
     setSeed([freshSeed]);
 
@@ -145,46 +187,76 @@ const AILabSection = () => {
     if (generatedVideo) URL.revokeObjectURL(generatedVideo.url);
     setGeneratedVideo(null);
     setLastGenId(null);
+    setLastLocalId(null);
     setProgressLabel(mode === "video" ? "Iniciando geração de vídeo..." : "");
     const stop = mode === "video" ? () => {} : startProgress();
 
     const enrichedPrompt = PROMPT_BOOSTERS[mode](input);
 
     try {
-      // ---- Text mode (streaming via Lovable AI) ----
+      // ---- Text mode (streaming via Lovable AI → fallback Pollinations text → mock) ----
       if (mode === "text") {
         let response = "";
         let gotAny = false;
-        await streamChat({
-          messages: [{ role: "user", content: enrichedPrompt }],
-          mode: "creative",
-          onDelta: (chunk) => { gotAny = true; response += chunk; setOutput(response); },
-          onDone: async () => {
-            stop(); setProgress(100);
-            if (user && response) {
-              await useCredit();
-              const id = await saveGeneration(input, null, response);
-              if (id) setLastGenId(id);
-            }
-            setIsLoading(false);
-          },
-          onError: async (err) => {
-            stop();
-            setProgress(0);
-            if (!gotAny) {
-              const friendly = /rate|429|limit/i.test(err) ? "Limite de uso atingido. Aguarde 1 minuto." : err || "Falha no chat.";
-              toast({ title: "Erro ao gerar texto", description: friendly, variant: "destructive" });
-            }
-            setIsLoading(false);
-          },
+        let streamFailed = false;
+
+        await new Promise<void>((resolve) => {
+          streamChat({
+            messages: [{ role: "user", content: enrichedPrompt }],
+            mode: "creative",
+            onDelta: (chunk) => { gotAny = true; response += chunk; setOutput(response); },
+            onDone: () => resolve(),
+            onError: (err) => {
+              console.warn("[Studio] streamChat failed:", err);
+              streamFailed = true;
+              resolve();
+            },
+          });
         });
+
+        if (!gotAny) {
+          // Fallback: pollinations text
+          try {
+            setProgressLabel("Tentando provedor alternativo...");
+            response = await pollinationsText(enrichedPrompt);
+            setOutput(response);
+          } catch (e) {
+            console.warn("[Studio] pollinations text failed, using mock:", e);
+            response = mockText(input);
+            setOutput(response);
+            toast({ title: "Modo offline", description: "Usando rascunho local — APIs indisponíveis." });
+          }
+        } else if (streamFailed && !response) {
+          response = mockText(input);
+          setOutput(response);
+        }
+
+        stop(); setProgress(100);
+        await useCredit();
+        const id = await saveGeneration(input, null, response);
+        if (id) setLastGenId(id);
+        toast({ title: "Adicionado ao Explore ✨" });
         return;
       }
 
-      // ---- Video mode (real .webm via Canvas + MediaRecorder) ----
+      // ---- Video mode (real .webm via Canvas + MediaRecorder, fallback to image card) ----
       if (mode === "video") {
         if (typeof MediaRecorder === "undefined") {
-          throw new Error("MediaRecorder não suportado neste navegador.");
+          // Fallback: render an image card as "video thumbnail"
+          toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
+          const url = pollinationsImage(enrichedPrompt, {
+            width: dims.w, height: dims.h, model: imgModel,
+            enhance: creativity[0] >= 50, seed: freshSeed,
+          });
+          await preloadImage(url);
+          setProgress(100);
+          setGeneratedImage(url);
+          setOutput(`Preview de vídeo (estático) ✨ — ${activeRatio.name}`);
+          await useCredit();
+          const id = await saveGeneration(input, url, null);
+          if (id) setLastGenId(id);
+          toast({ title: "Adicionado ao Explore ✨" });
+          return;
         }
         const result = await generateVideo(enrichedPrompt, {
           width: dims.w,
@@ -203,14 +275,10 @@ const AILabSection = () => {
         setProgress(100);
         setGeneratedVideo({ url: result.url, poster: result.posterUrl, mime: result.mime });
         setOutput(`Vídeo gerado ✨ — ${activeRatio.name}, ~5s`);
-        if (user) {
-          await useCredit();
-          const id = await saveGeneration(input, result.posterUrl, null);
-          if (id) {
-            setLastGenId(id);
-            toast({ title: "Adicionado ao Explore ✨" });
-          }
-        }
+        await useCredit();
+        const id = await saveGeneration(input, result.posterUrl, null, result.url);
+        if (id) setLastGenId(id);
+        toast({ title: "Adicionado ao Explore ✨" });
         return;
       }
 
@@ -222,7 +290,21 @@ const AILabSection = () => {
         enhance: creativity[0] >= 50,
         seed: freshSeed,
       });
-      await preloadImage(url);
+      try {
+        await preloadImage(url);
+      } catch (e) {
+        // Mock fallback: picsum seeded placeholder
+        const fallbackUrl = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
+        await preloadImage(fallbackUrl);
+        toast({ title: "Modo offline", description: "Usando placeholder — provedor de imagem indisponível." });
+        stop(); setProgress(100);
+        setGeneratedImage(fallbackUrl);
+        setOutput(`Placeholder gerado ✨ — ${activeRatio.name}`);
+        await useCredit();
+        const id = await saveGeneration(input, fallbackUrl, null);
+        if (id) setLastGenId(id);
+        return;
+      }
       stop(); setProgress(100);
       setGeneratedImage(url);
 
@@ -232,14 +314,10 @@ const AILabSection = () => {
       };
       setOutput(`${labelMap[mode]} ✨ — ${activeRatio.name}, qualidade ${quality[0]}%`);
 
-      if (user) {
-        await useCredit();
-        const id = await saveGeneration(input, url, null);
-        if (id) {
-          setLastGenId(id);
-          toast({ title: "Adicionado ao Explore ✨" });
-        }
-      }
+      await useCredit();
+      const id = await saveGeneration(input, url, null);
+      if (id) setLastGenId(id);
+      toast({ title: "Adicionado ao Explore ✨" });
     } catch (e) {
       stop();
       const msg = e instanceof Error ? e.message : String(e);
@@ -319,11 +397,18 @@ const AILabSection = () => {
         {/* Brand header — mascot preserved */}
         <div className="flex items-center gap-3 mb-3">
           <img src={mascotImg} alt="Lumy" className="h-10 w-10 animate-float" width={40} height={40} />
-          <div>
+          <div className="flex-1">
             <h2 className="font-heading text-2xl font-bold gradient-text">PixelNova AI Studio</h2>
             <p className="text-xs text-muted-foreground">{activeMode.hint}</p>
           </div>
+          <button
+            onClick={() => setPixOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/40 bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition"
+          >
+            <Heart className="h-3.5 w-3.5" /> Support / Buy Credits
+          </button>
         </div>
+        <PixSupportModal open={pixOpen} onOpenChange={setPixOpen} />
 
         {/* Mode tabs */}
         <div className="flex flex-wrap gap-1.5 mb-6 p-1 bg-muted rounded-xl w-fit">
@@ -424,15 +509,29 @@ const AILabSection = () => {
               </div>
             )}
 
-            {user && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t border-border">
-                <Sparkles className="h-3 w-3 text-primary" /> 1 crédito • {credits} restantes
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t border-border">
+              <Sparkles className="h-3 w-3 text-primary" /> 1 crédito • {credits} restantes
+              {bonus > 0 && <span className="ml-auto text-primary">+{bonus} bônus</span>}
+            </p>
           </aside>
 
           {/* Output area */}
           <div className="space-y-4">
+            {/* Quick suggestions */}
+            <div className="flex flex-wrap gap-1.5">
+              {QUICK_SUGGESTIONS[mode].map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setInput(s)}
+                  disabled={isLoading}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-border bg-muted/50 hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition"
+                >
+                  <Wand2 className="h-3 w-3 text-primary" /> {s.length > 42 ? s.slice(0, 40) + "…" : s}
+                </button>
+              ))}
+            </div>
+
             {/* Prompt input */}
             <div className="rounded-xl border border-border bg-card p-4">
               <textarea
@@ -450,7 +549,7 @@ const AILabSection = () => {
                 </span>
                 <button
                   onClick={handleGenerate}
-                  disabled={!input.trim() || isLoading || (user !== null && credits <= 0)}
+                  disabled={!input.trim() || isLoading || credits <= 0}
                   className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -493,12 +592,17 @@ const AILabSection = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/70 text-xs font-medium text-foreground transition">
                     <Repeat className="h-3.5 w-3.5" /> Remix
                   </button>
-                  {lastGenId && (
+                  {lastGenId ? (
                     <Link to={`/create/${lastGenId}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-xs font-medium text-primary transition ml-auto">
                       Ver no Explore →
                     </Link>
-                  )}
+                  ) : lastLocalId ? (
+                    <Link to="/explore"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-xs font-medium text-primary transition ml-auto">
+                      Ver no Explore →
+                    </Link>
+                  ) : null}
                 </div>
               )}
             </div>

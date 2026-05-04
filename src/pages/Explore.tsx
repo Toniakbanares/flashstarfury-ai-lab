@@ -97,7 +97,12 @@ const Explore = () => {
   }, [fetchPage, hasMore, loading]);
 
   const handleLike = async (genId: string) => {
-    const wasLiked = liked.has(genId);
+    // Local creations: bump local likes counter only
+    if (typeof genId === "string" && genId.startsWith("loc_")) {
+      likeLocalCreation(genId);
+      setLocalCreations(getLocalCreations());
+      return;
+    }
     const result = await toggle(genId);
     if (!result) return;
     const delta = result === "liked" ? 1 : -1;

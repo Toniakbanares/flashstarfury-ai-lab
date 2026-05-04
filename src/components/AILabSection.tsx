@@ -68,7 +68,7 @@ function mockText(prompt: string): string {
 const AILabSection = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { credits, useCredit } = useCredits();
+  const { credits, bonus, useCredit } = useCredits();
   const [searchParams] = useSearchParams();
 
   const [mode, setMode] = useState<Mode>("image");
@@ -80,7 +80,9 @@ const AILabSection = () => {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [lastGenId, setLastGenId] = useState<string | null>(null);
+  const [lastLocalId, setLastLocalId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pixOpen, setPixOpen] = useState(false);
 
   // Controls
   const [imgModel, setImgModel] = useState<string>("flux");

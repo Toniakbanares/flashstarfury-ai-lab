@@ -49,6 +49,22 @@ const PROMPT_BOOSTERS: Record<Mode, (p: string) => string> = {
   text:   p => p,
 };
 
+const QUICK_SUGGESTIONS: Record<Mode, string[]> = {
+  image:  ["cosmic fox in watercolor, nebula background", "cyberpunk Tokyo street, neon rain", "magical forest at sunset, fireflies"],
+  video:  ["drone over neon Tokyo at night", "waves crashing on a black sand beach", "spaceship flying through asteroid field"],
+  "3d":   ["isometric crystal cube glowing purple", "low-poly mountain landscape", "futuristic helmet, studio lighting"],
+  avatar: ["cyberpunk pilot portrait, neon highlights", "fantasy elf warrior, golden hour", "anime hero, vibrant colors"],
+  logo:   ["minimalist logo for 'Nova', star + spark", "coffee shop logo, warm tones", "tech startup logo, geometric"],
+  text:   ["Write a viral TikTok hook about productivity", "Cold email opening for a SaaS pitch", "3 catchy taglines for an AI app"],
+};
+
+// Mock fallbacks when APIs fail
+function mockText(prompt: string): string {
+  const intro = `# About: ${prompt}\n\n`;
+  const body = `Here's a generated draft based on your prompt. While the AI service was unavailable, this placeholder gives you a structure to start from:\n\n- **Hook:** Capture attention in the first sentence about "${prompt}".\n- **Insight:** Share one specific, useful idea.\n- **Action:** End with a clear next step the reader can take today.\n\n_Try again in a moment for a fully AI-written response._`;
+  return intro + body;
+}
+
 const AILabSection = () => {
   const { toast } = useToast();
   const { user } = useAuth();

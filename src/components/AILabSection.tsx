@@ -549,7 +549,7 @@ const AILabSection = () => {
                 </span>
                 <button
                   onClick={handleGenerate}
-                  disabled={!input.trim() || isLoading || (user !== null && credits <= 0)}
+                  disabled={!input.trim() || isLoading || credits <= 0}
                   className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

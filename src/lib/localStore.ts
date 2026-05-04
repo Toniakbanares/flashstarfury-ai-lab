@@ -1,11 +1,13 @@
-// Lightweight typed localStorage store for guest data + user submissions.
-// Used as a fallback when Supabase is not available or user is not logged in.
+// Lightweight typed localStorage store for guest data + user submissions + local explore + bonus credits.
 
 const KEYS = {
   submittedTools: "pixelnova_submitted_tools",
   savedTools: "pixelnova_saved_tools",
   savedOffers: "pixelnova_saved_offers",
   savedCreations: "pixelnova_saved_creations",
+  localExplore: "pixelnova_local_explore",
+  bonusCredits: "pixelnova_bonus_credits",
+  pixSupports: "pixelnova_pix_supports",
 } as const;
 
 export type SubmittedTool = {
@@ -26,6 +28,18 @@ export type SubmittedTool = {
   views_count: number;
   created_at: string;
   is_user_submission: true;
+};
+
+export type LocalCreation = {
+  id: string;
+  prompt: string;
+  tool_type: "image" | "video" | "3d" | "avatar" | "logo" | "text";
+  image_url: string | null;
+  video_url?: string | null;
+  result_text: string | null;
+  created_at: string;
+  is_local: true;
+  likes_count: number;
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -75,6 +89,57 @@ export const addSubmittedTool = (
   const list = getSubmittedTools();
   write(KEYS.submittedTools, [tool, ...list]);
   return tool;
+};
+
+// ---------- Local Explore (always works, no auth needed) ----------
+export const getLocalCreations = (): LocalCreation[] =>
+  read<LocalCreation[]>(KEYS.localExplore, []);
+
+export const addLocalCreation = (
+  data: Omit<LocalCreation, "id" | "created_at" | "is_local" | "likes_count">
+): LocalCreation => {
+  const c: LocalCreation = {
+    ...data,
+    id: `loc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    created_at: new Date().toISOString(),
+    is_local: true,
+    likes_count: 0,
+  };
+  const list = getLocalCreations();
+  // cap at 100 to prevent unbounded growth
+  write(KEYS.localExplore, [c, ...list].slice(0, 100));
+  return c;
+};
+
+export const likeLocalCreation = (id: string) => {
+  const list = getLocalCreations();
+  const next = list.map(c => c.id === id ? { ...c, likes_count: c.likes_count + 1 } : c);
+  write(KEYS.localExplore, next);
+};
+
+// ---------- Bonus credits (Pix support) ----------
+export const getBonusCredits = (): number =>
+  read<number>(KEYS.bonusCredits, 0);
+
+export const addBonusCredits = (amount: number): number => {
+  const next = getBonusCredits() + amount;
+  write(KEYS.bonusCredits, next);
+  return next;
+};
+
+export const useBonusCredit = (): boolean => {
+  const cur = getBonusCredits();
+  if (cur <= 0) return false;
+  write(KEYS.bonusCredits, cur - 1);
+  return true;
+};
+
+// ---------- Pix supports log ----------
+export type PixSupport = { id: string; proof: string; at: string };
+export const logPixSupport = (proof: string) => {
+  const list = read<PixSupport[]>(KEYS.pixSupports, []);
+  list.unshift({ id: `pix_${Date.now()}`, proof, at: new Date().toISOString() });
+  write(KEYS.pixSupports, list.slice(0, 50));
 };
 
 // ---------- Generic saved sets ----------

@@ -17,6 +17,7 @@ const Explore = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [generations, setGenerations] = useState<any[]>([]);
+  const [localCreations, setLocalCreations] = useState<any[]>(() => getLocalCreations());
   const [tab, setTab] = useState<Tab>("trending");
   const [category, setCategory] = useState<Category>("all");
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,31 @@ const Explore = () => {
   const [page, setPage] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const ids = useMemo(() => generations.map(g => g.id), [generations]);
+  // Listen for new local creations
+  useEffect(() => {
+    const refresh = () => setLocalCreations(getLocalCreations());
+    window.addEventListener(STORE_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(STORE_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  // Merge DB + local, dedup by id, apply category filter, sort by tab
+  const merged = useMemo(() => {
+    const all = [...localCreations, ...generations];
+    const filtered = category === "all" ? all : all.filter(g => g.tool_type === category);
+    if (tab === "latest") {
+      return [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    if (tab === "popular" || tab === "trending") {
+      return [...filtered].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+    }
+    return filtered;
+  }, [localCreations, generations, category, tab]);
+
+  const ids = useMemo(() => merged.map(g => g.id), [merged]);
   const { liked, toggle } = useLikes(ids);
 
   const fetchPage = useCallback(async (reset: boolean) => {

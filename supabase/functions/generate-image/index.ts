@@ -18,6 +18,29 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_AI_KEY = Deno.env.get("GOOGLE_AI_KEY");
+    const FAL_API_KEY = Deno.env.get("FAL_API_KEY");
+
+    // 0) FAL Flux Schnell (preferred when key exists — fast and high quality)
+    if (FAL_API_KEY) {
+      try {
+        const r = await fetch("https://fal.run/fal-ai/flux/schnell", {
+          method: "POST",
+          headers: { Authorization: `Key ${FAL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, image_size: "square_hd", num_inference_steps: 4 }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          const url = d?.images?.[0]?.url;
+          if (url) {
+            return new Response(JSON.stringify({ imageUrl: url, text: "Imagem gerada (FAL) ✨", provider: "fal" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        } else {
+          console.error("FAL image failed:", r.status, await r.text());
+        }
+      } catch (e) { console.error("FAL exception:", e); }
+    }
 
     // 1) Google Gemini direto (modelo atual de geração de imagem)
     if (GOOGLE_AI_KEY) {

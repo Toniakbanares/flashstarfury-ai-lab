@@ -9,6 +9,7 @@ import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
 import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
 import { generateVideo } from "@/lib/freevideo";
+import { generateImageServer, generateVideoServer, generate3DServer } from "@/lib/serverGen";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
@@ -239,10 +240,24 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- Video mode (real .webm via Canvas + MediaRecorder, fallback to image card) ----
+      // ---- Video mode (FAL via edge function → fallback canvas .webm → fallback static image) ----
       if (mode === "video") {
+        setProgressLabel("Tentando provedor de vídeo (FAL)...");
+        const srv = await generateVideoServer(enrichedPrompt);
+        if (srv.ok && srv.data?.videoUrl) {
+          setProgress(100);
+          // Use remote URL directly; build poster from pollinations
+          const poster = pollinationsImage(enrichedPrompt, { width: dims.w, height: dims.h, model: imgModel, seed: freshSeed });
+          setGeneratedVideo({ url: srv.data.videoUrl, poster, mime: "video/mp4" });
+          setOutput(`Vídeo gerado via FAL ✨ — ${activeRatio.name}`);
+          await useCredit();
+          const id = await saveGeneration(input, poster, null, srv.data.videoUrl);
+          if (id) setLastGenId(id);
+          toast({ title: "Adicionado ao Explore ✨" });
+          return;
+        }
+
         if (typeof MediaRecorder === "undefined") {
-          // Fallback: render an image card as "video thumbnail"
           toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
           const url = pollinationsImage(enrichedPrompt, {
             width: dims.w, height: dims.h, model: imgModel,
@@ -282,18 +297,50 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- Image-like modes (Image / Avatar / Logo / 3D) ----
-      const url = pollinationsImage(enrichedPrompt, {
-        width: dims.w,
-        height: dims.h,
-        model: mode === "logo" ? "flux" : imgModel,
-        enhance: creativity[0] >= 50,
-        seed: freshSeed,
-      });
+      // ---- 3D mode: try FAL Trellis (preview image) → fallback pollinations ----
+      if (mode === "3d") {
+        setProgressLabel("Tentando provedor 3D (FAL Trellis)...");
+        const srv = await generate3DServer(enrichedPrompt);
+        let url: string | null = null;
+        if (srv.ok && srv.data?.previewUrl) url = srv.data.previewUrl;
+        if (!url) {
+          url = pollinationsImage(enrichedPrompt, {
+            width: dims.w, height: dims.h, model: "flux-3d",
+            enhance: creativity[0] >= 50, seed: freshSeed,
+          });
+        }
+        try { await preloadImage(url); } catch {
+          url = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
+          await preloadImage(url);
+        }
+        stop(); setProgress(100);
+        setGeneratedImage(url);
+        setOutput(`Render 3D ✨ — ${activeRatio.name}`);
+        await useCredit();
+        const id = await saveGeneration(input, url, null);
+        if (id) setLastGenId(id);
+        toast({ title: "Adicionado ao Explore ✨" });
+        return;
+      }
+
+      // ---- Image-like modes (Image / Avatar / Logo) ----
+      // Try server (FAL via edge function) first
+      let url: string | null = null;
+      const srv = await generateImageServer(enrichedPrompt);
+      if (srv.ok && srv.data?.imageUrl) {
+        url = srv.data.imageUrl;
+      } else {
+        url = pollinationsImage(enrichedPrompt, {
+          width: dims.w,
+          height: dims.h,
+          model: mode === "logo" ? "flux" : imgModel,
+          enhance: creativity[0] >= 50,
+          seed: freshSeed,
+        });
+      }
       try {
         await preloadImage(url);
       } catch (e) {
-        // Mock fallback: picsum seeded placeholder
         const fallbackUrl = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
         await preloadImage(fallbackUrl);
         toast({ title: "Modo offline", description: "Usando placeholder — provedor de imagem indisponível." });

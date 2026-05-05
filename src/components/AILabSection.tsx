@@ -323,18 +323,24 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- Image-like modes (Image / Avatar / Logo / 3D) ----
-      const url = pollinationsImage(enrichedPrompt, {
-        width: dims.w,
-        height: dims.h,
-        model: mode === "logo" ? "flux" : imgModel,
-        enhance: creativity[0] >= 50,
-        seed: freshSeed,
-      });
+      // ---- Image-like modes (Image / Avatar / Logo) ----
+      // Try server (FAL via edge function) first
+      let url: string | null = null;
+      const srv = await generateImageServer(enrichedPrompt);
+      if (srv.ok && srv.data?.imageUrl) {
+        url = srv.data.imageUrl;
+      } else {
+        url = pollinationsImage(enrichedPrompt, {
+          width: dims.w,
+          height: dims.h,
+          model: mode === "logo" ? "flux" : imgModel,
+          enhance: creativity[0] >= 50,
+          seed: freshSeed,
+        });
+      }
       try {
         await preloadImage(url);
       } catch (e) {
-        // Mock fallback: picsum seeded placeholder
         const fallbackUrl = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
         await preloadImage(fallbackUrl);
         toast({ title: "Modo offline", description: "Usando placeholder — provedor de imagem indisponível." });

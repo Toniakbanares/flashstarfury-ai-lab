@@ -559,20 +559,7 @@ const AILabSection = () => {
 
           {/* Output area */}
           <div className="space-y-4">
-            {/* Quick suggestions */}
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_SUGGESTIONS[mode].map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setInput(s)}
-                  disabled={isLoading}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-border bg-muted/50 hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition"
-                >
-                  <Wand2 className="h-3 w-3 text-primary" /> {s.length > 42 ? s.slice(0, 40) + "…" : s}
-                </button>
-              ))}
-            </div>
+            {/* Quick suggestions removed for a cleaner UX */}
 
             {/* Prompt input */}
             <div className="rounded-xl border border-border bg-card p-4">

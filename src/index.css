@@ -6,48 +6,54 @@
 
 @layer base {
   :root {
-    --background: 230 25% 7%;
-    --foreground: 210 40% 95%;
+    /* PixelNova AI — soft dark, beige-gold accent (Linear/Raycast/Material You inspired) */
+    --background: 0 0% 4%;             /* #0b0b0b */
+    --foreground: 0 0% 96%;            /* #f5f5f5 */
 
-    --card: 230 20% 12%;
-    --card-foreground: 210 40% 95%;
+    --card: 30 6% 11%;                 /* #1c1b1a */
+    --card-foreground: 0 0% 96%;
 
-    --popover: 230 20% 12%;
-    --popover-foreground: 210 40% 95%;
+    --popover: 30 6% 11%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 45 100% 60%;
-    --primary-foreground: 230 25% 7%;
+    --primary: 38 65% 73%;             /* #e7c98f beige-gold */
+    --primary-foreground: 0 0% 8%;
 
-    --secondary: 260 60% 50%;
-    --secondary-foreground: 210 40% 95%;
+    --secondary: 30 6% 16%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 230 15% 18%;
-    --muted-foreground: 220 15% 55%;
+    --muted: 30 5% 14%;
+    --muted-foreground: 30 5% 60%;
 
-    --accent: 200 80% 55%;
-    --accent-foreground: 230 25% 7%;
+    --accent: 38 65% 73%;
+    --accent-foreground: 0 0% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 230 15% 20%;
-    --input: 230 15% 20%;
-    --ring: 45 100% 60%;
+    --success: 142 70% 58%;            /* #4ade80 */
+    --success-foreground: 0 0% 8%;
 
-    --radius: 0.75rem;
+    --border: 30 5% 18%;
+    --input: 30 5% 18%;
+    --ring: 38 65% 73%;
 
-    --sidebar-background: 230 20% 10%;
-    --sidebar-foreground: 210 40% 95%;
-    --sidebar-primary: 45 100% 60%;
-    --sidebar-primary-foreground: 230 25% 7%;
-    --sidebar-accent: 230 15% 18%;
-    --sidebar-accent-foreground: 210 40% 95%;
-    --sidebar-border: 230 15% 20%;
-    --sidebar-ring: 45 100% 60%;
+    --radius: 1rem;
 
-    --glow-gold: 45 100% 60%;
-    --glow-purple: 260 60% 50%;
-    --glow-blue: 200 80% 55%;
+    --sidebar-background: 30 6% 8%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 38 65% 73%;
+    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-accent: 30 5% 14%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 30 5% 18%;
+    --sidebar-ring: 38 65% 73%;
+
+    --glow-gold: 38 65% 73%;
+    --glow-purple: 260 60% 60%;
+    --glow-blue: 200 80% 60%;
+
+    --shadow-soft: 0 4px 24px -8px hsl(0 0% 0% / 0.4);
 
     --font-heading: 'Orbitron', sans-serif;
     --font-body: 'Inter', sans-serif;

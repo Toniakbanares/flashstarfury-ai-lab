@@ -1,19 +1,16 @@
-// Pollinations.ai - geração gratuita de imagens e texto, sem API key, sem login
-// Docs: https://pollinations.ai
-
+// Pollinations.ai — used only as last-resort poster/preview generator.
+// Trimmed to top-quality models only.
 export const POLLINATIONS_MODELS = [
-  { id: "flux", name: "Flux (Realista)" },
+  { id: "flux", name: "Flux" },
   { id: "flux-realism", name: "Flux Realism" },
-  { id: "flux-anime", name: "Flux Anime" },
   { id: "flux-3d", name: "Flux 3D" },
-  { id: "turbo", name: "Turbo (Rápido)" },
 ] as const;
 
 export const ASPECT_RATIOS = [
-  { id: "1:1", name: "Quadrado (1:1)", w: 1024, h: 1024 },
-  { id: "16:9", name: "Paisagem (16:9)", w: 1280, h: 720 },
-  { id: "9:16", name: "Retrato (9:16)", w: 720, h: 1280 },
-  { id: "4:3", name: "Clássico (4:3)", w: 1024, h: 768 },
+  { id: "1:1", name: "Square (1:1)", w: 1024, h: 1024 },
+  { id: "16:9", name: "Landscape (16:9)", w: 1280, h: 720 },
+  { id: "9:16", name: "Portrait (9:16)", w: 720, h: 1280 },
+  { id: "4:3", name: "Classic (4:3)", w: 1024, h: 768 },
   { id: "3:4", name: "Vertical (3:4)", w: 768, h: 1024 },
   { id: "21:9", name: "Cinema (21:9)", w: 1536, h: 640 },
 ] as const;
@@ -51,12 +48,11 @@ export async function pollinationsText(prompt: string, system?: string): Promise
   return data.choices?.[0]?.message?.content || "";
 }
 
-// Pré-carrega imagem para garantir que renderizou (Pollinations gera sob demanda)
 export function preloadImage(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(url);
-    img.onerror = () => reject(new Error("Falha ao carregar imagem"));
+    img.onerror = () => reject(new Error("Failed to load image"));
     img.src = url;
   });
 }

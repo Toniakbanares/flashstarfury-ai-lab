@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Image as ImageIcon, Video, Box, User, Sparkles, Sparkles as LogoIcon, FileText,
-  Send, Loader2, Download, Copy, Repeat, Check, Heart, Wand2,
+  Send, Loader2, Download, Copy, Repeat, Check, Heart,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
@@ -22,13 +22,15 @@ import PixSupportModal from "@/components/PixSupportModal";
 
 type Mode = "image" | "video" | "3d" | "avatar" | "logo" | "text";
 
+const PROMPT_PLACEHOLDER = "Describe what you want to create…";
+
 const MODES: { id: Mode; label: string; icon: typeof ImageIcon; hint: string; placeholder: string }[] = [
-  { id: "image",  label: "Image",  icon: ImageIcon, hint: "Generate stunning AI images.",            placeholder: "A cosmic fox painted in watercolor, vibrant nebula background..." },
-  { id: "video",  label: "Video",  icon: Video,     hint: "Create cinematic video previews.",        placeholder: "Slow drone shot over neon Tokyo at night, rain reflections..." },
-  { id: "3d",     label: "3D",     icon: Box,       hint: "Generate rotatable 3D object previews.",  placeholder: "Isometric crystal cube glowing purple, studio lighting..." },
-  { id: "avatar", label: "Avatar", icon: User,      hint: "Square AI portraits & avatars.",          placeholder: "Cyberpunk pilot portrait, neon highlights, sharp focus..." },
-  { id: "logo",   label: "Logo",   icon: LogoIcon,  hint: "Clean transparent-style logos.",          placeholder: "Minimalist logo for 'Nova', star + abstract spark, vector style..." },
-  { id: "text",   label: "Text",   icon: FileText,  hint: "AI-written copy, scripts & ideas.",       placeholder: "Write a viral TikTok hook about productivity..." },
+  { id: "image",  label: "Image",  icon: ImageIcon, hint: "Generate AI images.",                placeholder: PROMPT_PLACEHOLDER },
+  { id: "video",  label: "Video",  icon: Video,     hint: "Create short AI video clips.",       placeholder: PROMPT_PLACEHOLDER },
+  { id: "3d",     label: "3D",     icon: Box,       hint: "Generate 3D object previews.",       placeholder: PROMPT_PLACEHOLDER },
+  { id: "avatar", label: "Avatar", icon: User,      hint: "Square AI portraits.",               placeholder: PROMPT_PLACEHOLDER },
+  { id: "logo",   label: "Logo",   icon: LogoIcon,  hint: "Clean transparent-style logos.",     placeholder: PROMPT_PLACEHOLDER },
+  { id: "text",   label: "Text",   icon: FileText,  hint: "AI-written copy & ideas.",           placeholder: PROMPT_PLACEHOLDER },
 ];
 
 // Default aspect ratio per mode
@@ -50,14 +52,7 @@ const PROMPT_BOOSTERS: Record<Mode, (p: string) => string> = {
   text:   p => p,
 };
 
-const QUICK_SUGGESTIONS: Record<Mode, string[]> = {
-  image:  ["cosmic fox in watercolor, nebula background", "cyberpunk Tokyo street, neon rain", "magical forest at sunset, fireflies"],
-  video:  ["drone over neon Tokyo at night", "waves crashing on a black sand beach", "spaceship flying through asteroid field"],
-  "3d":   ["isometric crystal cube glowing purple", "low-poly mountain landscape", "futuristic helmet, studio lighting"],
-  avatar: ["cyberpunk pilot portrait, neon highlights", "fantasy elf warrior, golden hour", "anime hero, vibrant colors"],
-  logo:   ["minimalist logo for 'Nova', star + spark", "coffee shop logo, warm tones", "tech startup logo, geometric"],
-  text:   ["Write a viral TikTok hook about productivity", "Cold email opening for a SaaS pitch", "3 catchy taglines for an AI app"],
-};
+// Quick suggestions removed for a cleaner UX. Use the placeholder for guidance.
 
 // Mock fallbacks when APIs fail
 function mockText(prompt: string): string {
@@ -564,20 +559,7 @@ const AILabSection = () => {
 
           {/* Output area */}
           <div className="space-y-4">
-            {/* Quick suggestions */}
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_SUGGESTIONS[mode].map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setInput(s)}
-                  disabled={isLoading}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-border bg-muted/50 hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition"
-                >
-                  <Wand2 className="h-3 w-3 text-primary" /> {s.length > 42 ? s.slice(0, 40) + "…" : s}
-                </button>
-              ))}
-            </div>
+            {/* Quick suggestions removed for a cleaner UX */}
 
             {/* Prompt input */}
             <div className="rounded-xl border border-border bg-card p-4">

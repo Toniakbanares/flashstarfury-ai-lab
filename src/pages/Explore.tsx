@@ -45,18 +45,19 @@ const Explore = () => {
     };
   }, []);
 
-  // Merge DB + local, dedup by id, apply category filter, sort by tab
+  // Merge DB + local (+ demo seed if there is no real content), filter by category & search, sort by tab
   const merged = useMemo(() => {
-    const all = [...localCreations, ...generations];
-    const filtered = category === "all" ? all : all.filter(g => g.tool_type === category);
+    const real = [...localCreations, ...generations];
+    const base = real.length === 0 ? [...DEMO_CREATIONS] : real;
+    let filtered = category === "all" ? base : base.filter((g) => g.tool_type === category);
+    if (debounced) {
+      filtered = filtered.filter((g) => (g.prompt || "").toLowerCase().includes(debounced));
+    }
     if (tab === "latest") {
       return [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
-    if (tab === "popular" || tab === "trending") {
-      return [...filtered].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
-    }
-    return filtered;
-  }, [localCreations, generations, category, tab]);
+    return [...filtered].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+  }, [localCreations, generations, category, tab, debounced]);
 
   const ids = useMemo(() => merged.map(g => g.id), [merged]);
   const { liked, toggle } = useLikes(ids);

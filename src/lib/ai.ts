@@ -87,6 +87,7 @@ export async function streamChat({
 
     onDone();
   } catch (e) {
+    if ((e as any)?.name === "AbortError") { onDone(); return; }
     onError(e instanceof Error ? e.message : "Erro de conexão");
   }
 }

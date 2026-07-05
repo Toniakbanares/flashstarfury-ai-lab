@@ -7,6 +7,7 @@ export async function streamChat({
   messages,
   mode,
   model,
+  signal,
   onDelta,
   onDone,
   onError,
@@ -14,12 +15,14 @@ export async function streamChat({
   messages: Msg[];
   mode?: string;
   model?: string;
+  signal?: AbortSignal;
   onDelta: (deltaText: string) => void;
   onDone: () => void;
   onError: (error: string) => void;
 }) {
   try {
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
+      signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -107,6 +107,11 @@ const Explore = () => {
   }, [fetchPage, hasMore, loading]);
 
   const handleLike = async (genId: string) => {
+    // Demo seed items: no-op (they are just showcase content)
+    if (typeof genId === "string" && genId.startsWith("demo_")) {
+      toast({ title: "Demo item", description: "Curtir/remixar disponível em criações reais." });
+      return;
+    }
     // Local creations: bump local likes counter only
     if (typeof genId === "string" && genId.startsWith("loc_")) {
       likeLocalCreation(genId);

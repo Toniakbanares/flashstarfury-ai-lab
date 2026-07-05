@@ -181,12 +181,19 @@ const Explore = () => {
 
       {merged.length === 0 && !loading ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p>Nenhuma criação ainda. Seja o primeiro!</p>
+          <p>{debounced ? `Nenhum resultado para "${search}".` : "Nenhuma criação ainda. Seja o primeiro!"}</p>
         </div>
       ) : (
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
-          {merged.map(gen => (
-            <CreationCard key={gen.id} gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
+          {merged.map((gen) => (
+            <div key={gen.id} className="relative">
+              {gen.is_demo && (
+                <span className="absolute top-2 left-2 z-10 text-[9px] font-semibold uppercase tracking-wider bg-background/90 text-primary border border-primary/40 px-1.5 py-0.5 rounded">
+                  Demo
+                </span>
+              )}
+              <CreationCard gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
+            </div>
           ))}
         </div>
       )}

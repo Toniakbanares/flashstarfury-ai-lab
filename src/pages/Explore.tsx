@@ -136,6 +136,27 @@ const Explore = () => {
         <p className="text-sm text-muted-foreground">Explore, curta e remixe criações da comunidade PixelNova AI.</p>
       </header>
 
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search prompts…"
+          aria-label="Search creations"
+          className="w-full bg-card border border-border rounded-lg pl-9 pr-9 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Templates removed per user request */}
 
       {/* Tabs + filters */}

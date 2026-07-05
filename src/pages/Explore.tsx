@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, Clock, Flame, Loader2 } from "lucide-react";
+import { TrendingUp, Clock, Flame, Loader2, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLikes } from "@/hooks/useLikes";
 import { CATEGORY_FILTERS } from "@/lib/templates";
 import CreationCard from "@/components/CreationCard";
 import { getLocalCreations, likeLocalCreation, STORE_EVENT } from "@/lib/localStore";
+import { DEMO_CREATIONS } from "@/lib/demoCreations";
 
 type Tab = "trending" | "latest" | "popular";
 type Category = typeof CATEGORY_FILTERS[number]["id"];
@@ -23,7 +24,15 @@ const Explore = () => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search.trim().toLowerCase()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // Listen for new local creations
   useEffect(() => {
@@ -36,18 +45,19 @@ const Explore = () => {
     };
   }, []);
 
-  // Merge DB + local, dedup by id, apply category filter, sort by tab
+  // Merge DB + local (+ demo seed if there is no real content), filter by category & search, sort by tab
   const merged = useMemo(() => {
-    const all = [...localCreations, ...generations];
-    const filtered = category === "all" ? all : all.filter(g => g.tool_type === category);
+    const real = [...localCreations, ...generations];
+    const base = real.length === 0 ? [...DEMO_CREATIONS] : real;
+    let filtered = category === "all" ? base : base.filter((g) => g.tool_type === category);
+    if (debounced) {
+      filtered = filtered.filter((g) => (g.prompt || "").toLowerCase().includes(debounced));
+    }
     if (tab === "latest") {
       return [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
-    if (tab === "popular" || tab === "trending") {
-      return [...filtered].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
-    }
-    return filtered;
-  }, [localCreations, generations, category, tab]);
+    return [...filtered].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+  }, [localCreations, generations, category, tab, debounced]);
 
   const ids = useMemo(() => merged.map(g => g.id), [merged]);
   const { liked, toggle } = useLikes(ids);
@@ -97,6 +107,11 @@ const Explore = () => {
   }, [fetchPage, hasMore, loading]);
 
   const handleLike = async (genId: string) => {
+    // Demo seed items: no-op (they are just showcase content)
+    if (typeof genId === "string" && genId.startsWith("demo_")) {
+      toast({ title: "Demo item", description: "Curtir/remixar disponível em criações reais." });
+      return;
+    }
     // Local creations: bump local likes counter only
     if (typeof genId === "string" && genId.startsWith("loc_")) {
       likeLocalCreation(genId);
@@ -126,6 +141,27 @@ const Explore = () => {
         <p className="text-sm text-muted-foreground">Explore, curta e remixe criações da comunidade PixelNova AI.</p>
       </header>
 
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search prompts…"
+          aria-label="Search creations"
+          className="w-full bg-card border border-border rounded-lg pl-9 pr-9 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       {/* Templates removed per user request */}
 
       {/* Tabs + filters */}
@@ -150,12 +186,19 @@ const Explore = () => {
 
       {merged.length === 0 && !loading ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p>Nenhuma criação ainda. Seja o primeiro!</p>
+          <p>{debounced ? `Nenhum resultado para "${search}".` : "Nenhuma criação ainda. Seja o primeiro!"}</p>
         </div>
       ) : (
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
-          {merged.map(gen => (
-            <CreationCard key={gen.id} gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
+          {merged.map((gen) => (
+            <div key={gen.id} className="relative">
+              {gen.is_demo && (
+                <span className="absolute top-2 left-2 z-10 text-[9px] font-semibold uppercase tracking-wider bg-background/90 text-primary border border-primary/40 px-1.5 py-0.5 rounded">
+                  Demo
+                </span>
+              )}
+              <CreationCard gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
+            </div>
           ))}
         </div>
       )}

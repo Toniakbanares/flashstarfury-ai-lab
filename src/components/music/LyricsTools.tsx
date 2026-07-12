@@ -64,11 +64,32 @@ const LyricsTools = () => {
   const exportTXT = () => downloadText(text || "", "lyrics.txt");
 
   const transcribe = async (file: File) => {
+    if (file.size < 1024) { toast.error("Audio file looks empty. Please record again."); return; }
+    if (file.size > 24 * 1024 * 1024) { toast.error("Audio too large (max 24MB). Split it into shorter clips."); return; }
     setTranscribing(true);
+    const toastId = toast.loading("Transcribing audio…");
     try {
-      // Client hint only — real Whisper needs paid API
-      toast.info("Audio transcription needs Whisper API (coming soon). Try pasting your lyrics instead.");
-    } finally { setTranscribing(false); }
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const fd = new FormData();
+      fd.append("file", file, file.name || "audio.webm");
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-audio`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: fd,
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data?.text) {
+        toast.error(data?.error || `Transcription failed (${resp.status})`, { id: toastId });
+        return;
+      }
+      setText((prev) => (prev ? `${prev}\n\n${data.text}` : data.text));
+      toast.success(data.mock ? "Mock transcript inserted (no API key set)" : "Transcript inserted", { id: toastId });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Transcription failed", { id: toastId });
+    } finally {
+      setTranscribing(false);
+    }
   };
 
   const improveWithAI = async () => {

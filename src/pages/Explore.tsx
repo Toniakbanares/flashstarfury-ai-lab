@@ -192,11 +192,6 @@ const Explore = () => {
         <div className="columns-2 md:columns-3 lg:columns-4 gap-4">
           {merged.map((gen) => (
             <div key={gen.id} className="relative">
-              {gen.is_demo && (
-                <span className="absolute top-2 left-2 z-10 text-[9px] font-semibold uppercase tracking-wider bg-background/90 text-primary border border-primary/40 px-1.5 py-0.5 rounded">
-                  Demo
-                </span>
-              )}
               <CreationCard gen={gen} isLiked={liked.has(gen.id)} onLike={handleLike} />
             </div>
           ))}

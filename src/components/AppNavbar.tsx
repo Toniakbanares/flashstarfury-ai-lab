@@ -73,7 +73,7 @@ const AppNavbar = () => {
             <span className="text-foreground">{credits}</span>
           </div>
           {user ? (
-            <button onClick={signOut} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            <button onClick={signOut} aria-label="Sign out" title="Sign out" className="flex items-center gap-1 rounded-lg p-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted">
               <LogOut className="h-4 w-4" />
             </button>
           ) : (

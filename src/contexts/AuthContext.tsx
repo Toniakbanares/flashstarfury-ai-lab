@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { migrateLocalToCloud } from "@/lib/hybridStore";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -23,6 +24,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) {
+        // Defer to avoid deadlock inside the auth callback.
+        setTimeout(() => { migrateLocalToCloud().catch(() => {}); }, 0);
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {

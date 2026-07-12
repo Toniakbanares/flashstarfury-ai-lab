@@ -281,6 +281,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_data: {
+        Row: {
+          id: string
+          key: string
+          namespace: string
+          updated_at: string
+          user_id: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          namespace: string
+          updated_at?: string
+          user_id: string
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          namespace?: string
+          updated_at?: string
+          user_id?: string
+          value?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

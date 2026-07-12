@@ -7,7 +7,7 @@ import { useLikes } from "@/hooks/useLikes";
 import { CATEGORY_FILTERS } from "@/lib/templates";
 import CreationCard from "@/components/CreationCard";
 import { getLocalCreations, likeLocalCreation, STORE_EVENT } from "@/lib/localStore";
-import { DEMO_CREATIONS } from "@/lib/demoCreations";
+
 
 type Tab = "trending" | "latest" | "popular";
 type Category = typeof CATEGORY_FILTERS[number]["id"];
@@ -47,8 +47,8 @@ const Explore = () => {
 
   // Merge DB + local (+ demo seed if there is no real content), filter by category & search, sort by tab
   const merged = useMemo(() => {
-    const real = [...localCreations, ...generations];
-    const base = real.length === 0 ? [...DEMO_CREATIONS] : real;
+    // Explore shows only real user creations — no seeded/demo content.
+    const base = [...localCreations, ...generations];
     let filtered = category === "all" ? base : base.filter((g) => g.tool_type === category);
     if (debounced) {
       filtered = filtered.filter((g) => (g.prompt || "").toLowerCase().includes(debounced));

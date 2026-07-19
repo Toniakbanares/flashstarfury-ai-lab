@@ -178,14 +178,14 @@ const AILabSection = () => {
     try {
       await new Promise<void>((resolve) => {
         streamChat({
-          messages: [{ role: "user", content: base }],
-          mode: PROMPT_OPTIMIZER[mode],
+          messages: [{ role: "user", content: `${PROMPT_OPTIMIZER[mode]}\n\nUser idea: ${base}` }],
+          mode: "creative",
           onDelta: (c) => { out += c; },
           onDone: () => resolve(),
           onError: () => resolve(),
         });
       });
-      const cleaned = out.trim().replace(/^["']|["']$/g, "");
+      const cleaned = out.trim().replace(/^["']|["']$/g, "").replace(/^Prompt:\s*/i, "");
       if (cleaned) {
         setInput(cleaned.slice(0, 500));
         toast({ title: "Prompt otimizado ✨" });

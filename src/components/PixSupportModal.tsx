@@ -33,8 +33,8 @@ export default function PixSupportModal({
     if (proof.trim()) logPixSupport(proof.trim());
     setPaid(true);
     toast({
-      title: `Obrigado pelo apoio! +${BONUS} créditos bônus`,
-      description: `Você agora tem ${total} créditos bônus locais.`,
+      title: `Muito obrigado pelo apoio! ♥`,
+      description: `Sua contribuição ajuda a manter o StarFury AI gratuito e sem limites.`,
     });
     setTimeout(() => {
       onOpenChange(false);

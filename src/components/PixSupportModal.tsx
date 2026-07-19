@@ -54,8 +54,8 @@ export default function PixSupportModal({
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm">
-            You can support this project via Pix to unlock more features. Apoio
-            opcional — totalmente voluntário.
+            Todas as ferramentas são gratuitas e sem limites. Se quiser retribuir,
+            você pode contribuir voluntariamente com qualquer valor via Pix — 100% opcional.
           </DialogDescription>
         </DialogHeader>
 

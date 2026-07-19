@@ -8,7 +8,7 @@ import { addBonusCredits, logPixSupport, getBonusCredits } from "@/lib/localStor
 import { copyToClipboard } from "@/lib/share";
 import mascotImg from "@/assets/mascot.png";
 
-const PIX_KEY = "pixelnova-ai@support.pix";
+const PIX_KEY = "starfury-ai@support.pix";
 const BONUS = 50;
 
 export default function PixSupportModal({
@@ -33,8 +33,8 @@ export default function PixSupportModal({
     if (proof.trim()) logPixSupport(proof.trim());
     setPaid(true);
     toast({
-      title: `Obrigado pelo apoio! +${BONUS} créditos bônus`,
-      description: `Você agora tem ${total} créditos bônus locais.`,
+      title: `Muito obrigado pelo apoio! ♥`,
+      description: `Sua contribuição ajuda a manter o StarFury AI gratuito e sem limites.`,
     });
     setTimeout(() => {
       onOpenChange(false);
@@ -54,8 +54,8 @@ export default function PixSupportModal({
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm">
-            You can support this project via Pix to unlock more features. Apoio
-            opcional — totalmente voluntário.
+            Todas as ferramentas são gratuitas e sem limites. Se quiser retribuir,
+            você pode contribuir voluntariamente com qualquer valor via Pix — 100% opcional.
           </DialogDescription>
         </DialogHeader>
 
@@ -104,14 +104,13 @@ export default function PixSupportModal({
           {paid ? (
             <><Check className="h-4 w-4" /> Obrigado!</>
           ) : (
-            <><Heart className="h-4 w-4" /> Já paguei — receber +{BONUS} créditos</>
+            <><Heart className="h-4 w-4" /> Confirmar apoio voluntário</>
           )}
         </Button>
 
         <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
           <Sparkles className="h-3 w-3 text-primary" />
-          Créditos bônus são salvos localmente no seu navegador. Saldo atual:{" "}
-          {getBonusCredits()}
+          Qualquer valor é bem-vindo. Sem obrigação, sem cobrança automática.
         </p>
       </DialogContent>
     </Dialog>

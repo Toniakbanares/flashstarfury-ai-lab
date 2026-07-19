@@ -79,6 +79,7 @@ const AILabSection = () => {
   const [lastLocalId, setLastLocalId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
 
   // Controls
   const [imgModel, setImgModel] = useState<string>("flux");
@@ -158,19 +159,48 @@ const AILabSection = () => {
     return () => window.clearInterval(id);
   };
 
+  // Optimize the user prompt for the currently selected generator using AI.
+  // Works even with an empty input — will invent an idea for the current mode.
+  const PROMPT_OPTIMIZER: Record<Mode, string> = {
+    image:  "You are a prompt engineer for a text-to-image diffusion model (Flux). Rewrite the user's idea into ONE single vivid English prompt (max 60 words). Include: subject, style, lighting, camera/lens, mood, color palette, high-detail keywords. No lists, no quotes, no preamble — output ONLY the final prompt.",
+    video:  "You are a prompt engineer for a text-to-video model. Rewrite the user's idea into ONE cinematic English prompt (max 55 words) describing subject, motion, camera movement, lens, lighting, mood. Output ONLY the final prompt.",
+    "3d":   "You are a prompt engineer for a 3D render model. Rewrite the user's idea into ONE English prompt (max 50 words) for an isometric octane-style 3D render: subject, materials, lighting, background, camera angle. Output ONLY the final prompt.",
+    avatar: "You are a prompt engineer for AI portraits. Rewrite the user's idea into ONE English prompt (max 45 words) for a centered professional portrait: subject, age/ethnicity if given, expression, wardrobe, background, lighting, lens. Output ONLY the final prompt.",
+    logo:   "You are a prompt engineer for AI logo generation. Rewrite the user's idea into ONE English prompt (max 35 words) for a clean vector logo on white: concept, shape, style (flat/minimal/geometric), color palette. Output ONLY the final prompt.",
+    text:   "You are a writing coach. Turn the user's rough idea into ONE crisp, actionable writing brief (max 40 words) — topic, angle, tone, target reader, desired outcome. Output ONLY the brief.",
+  };
+
+  const handleEnhance = async () => {
+    if (enhancing || isLoading) return;
+    const base = input.trim() || `a creative ${mode} concept`;
+    setEnhancing(true);
+    let out = "";
+    try {
+      await new Promise<void>((resolve) => {
+        streamChat({
+          messages: [{ role: "user", content: `${PROMPT_OPTIMIZER[mode]}\n\nUser idea: ${base}` }],
+          mode: "creative",
+          onDelta: (c) => { out += c; },
+          onDone: () => resolve(),
+          onError: () => resolve(),
+        });
+      });
+      const cleaned = out.trim().replace(/^["']|["']$/g, "").replace(/^Prompt:\s*/i, "");
+      if (cleaned) {
+        setInput(cleaned.slice(0, 500));
+        toast({ title: "Prompt otimizado ✨" });
+      } else {
+        toast({ title: "Não consegui otimizar", description: "Tente novamente.", variant: "destructive" });
+      }
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!input.trim() || isLoading) return;
     if (input.length > 500) {
       toast({ title: "Prompt muito longo", description: "Máximo 500 caracteres.", variant: "destructive" });
-      return;
-    }
-    if (credits <= 0) {
-      toast({
-        title: "Sem créditos",
-        description: "Você usou seus 5 créditos diários. Apoie via Pix para receber +50 bônus.",
-        variant: "destructive",
-      });
-      setPixOpen(true);
       return;
     }
 
@@ -552,8 +582,13 @@ const AILabSection = () => {
             )}
 
             <p className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t border-border">
-              <Sparkles className="h-3 w-3 text-primary" /> 1 crédito • {credits} restantes
-              {bonus > 0 && <span className="ml-auto text-primary">+{bonus} bônus</span>}
+              <Sparkles className="h-3 w-3 text-primary" /> Gerações ilimitadas grátis
+              <button
+                onClick={() => setPixOpen(true)}
+                className="ml-auto text-primary hover:underline font-semibold"
+              >
+                Apoiar ♥
+              </button>
             </p>
           </aside>
 
@@ -576,14 +611,26 @@ const AILabSection = () => {
                 <span className="text-xs text-muted-foreground">
                   {input.length}/500 chars
                 </span>
-                <button
-                  onClick={handleGenerate}
-                  disabled={!input.trim() || isLoading || credits <= 0}
-                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
-                >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Generate
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleEnhance}
+                    disabled={isLoading || enhancing}
+                    title="Otimizar prompt com IA para o gerador atual"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/10 disabled:opacity-40 transition-all"
+                  >
+                    {enhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {enhancing ? "Otimizando..." : "Auto-prompt"}
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={!input.trim() || isLoading}
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Generate
+                  </button>
+                </div>
               </div>
               {progress > 0 && (
                 <div className="mt-3 space-y-1">

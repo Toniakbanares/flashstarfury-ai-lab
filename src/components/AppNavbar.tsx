@@ -68,9 +68,9 @@ const AppNavbar = () => {
           <Link to="/submit" className="hidden sm:flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all">
             <Plus className="h-3.5 w-3.5" /> Submit
           </Link>
-          <div className="flex items-center gap-1 bg-muted rounded-lg px-2.5 py-1.5 text-xs font-medium">
+          <div className="flex items-center gap-1 bg-muted rounded-lg px-2.5 py-1.5 text-xs font-medium" title="Gerações ilimitadas grátis">
             <Star className="h-3.5 w-3.5 text-primary" />
-            <span className="text-foreground">{credits}</span>
+            <span className="text-foreground">∞</span>
           </div>
           {user ? (
             <button onClick={signOut} aria-label="Sign out" title="Sign out" className="flex items-center gap-1 rounded-lg p-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted">

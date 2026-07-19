@@ -37,7 +37,7 @@ const Dashboard = () => {
 
       <div className="grid gap-4 sm:grid-cols-4 mb-8">
         {[
-          { icon: Star, label: "Créditos Hoje", value: `${credits}/5` },
+          { icon: Star, label: "Créditos", value: "Ilimitado" },
           { icon: Image, label: "Gerações", value: stats.total },
           { icon: Clock, label: "Públicas", value: stats.public },
           { icon: Heart, label: "Likes Recebidos", value: stats.likes },

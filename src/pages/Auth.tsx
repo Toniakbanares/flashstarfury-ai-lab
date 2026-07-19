@@ -41,8 +41,8 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <img src={mascotImg} alt="PixelNova" className="h-16 w-16 mx-auto" />
-          <h1 className="font-heading text-2xl font-bold gradient-text">PixelNova AI</h1>
+          <img src={mascotImg} alt="StarFury" className="h-16 w-16 mx-auto" />
+          <h1 className="font-heading text-2xl font-bold gradient-text">StarFury AI</h1>
           <p className="text-muted-foreground text-sm">{isLogin ? "Entre na sua conta" : "Crie sua conta grátis"}</p>
         </div>
 

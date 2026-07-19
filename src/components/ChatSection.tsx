@@ -27,7 +27,7 @@ const MODEL_KEY = "pixelnova_chat_model_v1";
 const WELCOME: Message = {
   id: "welcome",
   role: "assistant",
-  content: "Hi! I'm **Lumy**, your AI assistant at PixelNova AI. Ask anything or generate an image.",
+  content: "Hi! I'm **Lumy**, your AI assistant at StarFury AI. Ask anything or generate an image.",
 };
 
 function loadMessages(): Message[] {

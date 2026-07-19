@@ -138,7 +138,7 @@ const Explore = () => {
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <header className="mb-6">
         <h1 className="font-heading text-3xl font-bold gradient-text mb-1">Discover AI Creations</h1>
-        <p className="text-sm text-muted-foreground">Explore, curta e remixe criações da comunidade PixelNova AI.</p>
+        <p className="text-sm text-muted-foreground">Explore, curta e remixe criações da comunidade StarFury AI.</p>
       </header>
 
       {/* Search */}

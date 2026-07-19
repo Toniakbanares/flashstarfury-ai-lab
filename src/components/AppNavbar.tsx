@@ -26,8 +26,8 @@ const AppNavbar = () => {
       <PixSupportModal open={pixOpen} onOpenChange={setPixOpen} />
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
-          <img src={mascotImg} alt="PixelNova AI" className="h-8 w-8" width={32} height={32} />
-          <h1 className="font-heading text-lg font-bold gradient-text">PixelNova AI</h1>
+          <img src={mascotImg} alt="StarFury AI" className="h-8 w-8" width={32} height={32} />
+          <h1 className="font-heading text-lg font-bold gradient-text">StarFury AI</h1>
         </Link>
 
         <div className="hidden md:flex items-center gap-1">

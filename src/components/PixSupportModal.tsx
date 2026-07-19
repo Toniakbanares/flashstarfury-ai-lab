@@ -50,7 +50,7 @@ export default function PixSupportModal({
           <div className="flex items-center gap-2 mb-1">
             <img src={mascotImg} alt="Lumy" className="h-8 w-8 animate-float" />
             <DialogTitle className="font-heading text-lg gradient-text">
-              Support PixelNova AI
+              Support StarFury AI
             </DialogTitle>
           </div>
           <DialogDescription className="text-sm">

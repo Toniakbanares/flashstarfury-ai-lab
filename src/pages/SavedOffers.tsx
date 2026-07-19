@@ -14,7 +14,7 @@ const SavedOffers = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = "Saved Offers — PixelNova AI";
+    document.title = "Saved Offers — StarFury AI";
     if (!user) return;
     supabase.from("saved_offers").select("offer_id, offers(*)").eq("user_id", user.id)
       .then(({ data }) => {

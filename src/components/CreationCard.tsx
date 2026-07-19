@@ -25,7 +25,7 @@ const CreationCard = ({ gen, isLiked, onLike }: Props) => {
   const [shareOpen, setShareOpen] = useState(false);
   const creator = gen.profiles?.display_name || "Anônimo";
   const publicUrl = `${window.location.origin}/create/${gen.id}`;
-  const links = shareLinks(publicUrl, `Confira esta criação no PixelNova AI: ${gen.prompt.slice(0, 80)}`);
+  const links = shareLinks(publicUrl, `Confira esta criação no StarFury AI: ${gen.prompt.slice(0, 80)}`);
 
   const handleRemix = () => {
     navigate(`/tools?tool=image&prompt=${encodeURIComponent(gen.prompt)}&remix=${gen.id}`);

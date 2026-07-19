@@ -30,13 +30,13 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     let systemPrompt =
-      "You are Lumy, the AI assistant of PixelNova AI. Be helpful, concise, and friendly. Use clean markdown formatting. Reply in the user's language.";
+      "You are Lumy, the AI assistant of StarFury AI. Be helpful, concise, and friendly. Use clean markdown formatting. Reply in the user's language.";
     if (mode === "creative") {
       systemPrompt =
-        "You are Lumy, the creative writer of PixelNova AI. Specialize in copy, scripts, hooks, and structured creative drafts. Use clean markdown.";
+        "You are Lumy, the creative writer of StarFury AI. Specialize in copy, scripts, hooks, and structured creative drafts. Use clean markdown.";
     } else if (mode === "code") {
       systemPrompt =
-        "You are Lumy Coder of PixelNova AI. Specialist in code, debugging, and architecture. Always wrap code in fenced markdown blocks with the language tag.";
+        "You are Lumy Coder of StarFury AI. Specialist in code, debugging, and architecture. Always wrap code in fenced markdown blocks with the language tag.";
     }
 
     const chosenModel = ALLOWED_MODELS.has(model) ? model : DEFAULT_MODEL;
@@ -51,7 +51,7 @@ serve(async (req) => {
             Authorization: `Bearer ${OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
             "HTTP-Referer": "https://pixelnova.lovable.app",
-            "X-Title": "PixelNova AI",
+            "X-Title": "StarFury AI",
           },
           body: JSON.stringify({
             model: chosenModel,

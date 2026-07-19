@@ -34,7 +34,7 @@ const Offerings = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = "Make Money With AI — PixelNova AI Offerings";
+    document.title = "Make Money With AI — StarFury AI Offerings";
     supabase.from("offers").select("*").eq("is_active", true).order("is_featured", { ascending: false }).order("created_at", { ascending: false })
       .then(({ data }) => { setOffers((data as Offer[]) ?? []); setLoading(false); });
   }, []);

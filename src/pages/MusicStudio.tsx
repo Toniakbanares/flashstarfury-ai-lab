@@ -24,9 +24,9 @@ const MusicStudio = () => {
   const [active, setActive] = useState<typeof TABS[number]["id"]>("songwriter");
 
   useEffect(() => {
-    document.title = "AI Music Studio — PixelNova AI";
+    document.title = "AI Music Studio — StarFury AI";
     const desc = document.querySelector('meta[name="description"]');
-    if (desc) desc.setAttribute("content", "Write lyrics, generate chords, design covers, and prepare music releases with PixelNova AI Music Studio.");
+    if (desc) desc.setAttribute("content", "Write lyrics, generate chords, design covers, and prepare music releases with StarFury AI Music Studio.");
   }, []);
 
   const Comp = TABS.find((t) => t.id === active)!.Comp;
@@ -37,7 +37,7 @@ const MusicStudio = () => {
         <div className="rounded-xl bg-primary/10 p-2.5"><Music className="h-6 w-6 text-primary" /></div>
         <div>
           <h1 className="font-heading text-2xl font-bold gradient-text">AI Music Studio</h1>
-          <p className="text-xs text-muted-foreground">Songwriting, chords, cover art & release prep — powered by PixelNova AI.</p>
+          <p className="text-xs text-muted-foreground">Songwriting, chords, cover art & release prep — powered by StarFury AI.</p>
         </div>
       </header>
 

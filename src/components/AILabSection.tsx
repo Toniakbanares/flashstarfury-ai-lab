@@ -582,8 +582,13 @@ const AILabSection = () => {
             )}
 
             <p className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t border-border">
-              <Sparkles className="h-3 w-3 text-primary" /> 1 crédito • {credits} restantes
-              {bonus > 0 && <span className="ml-auto text-primary">+{bonus} bônus</span>}
+              <Sparkles className="h-3 w-3 text-primary" /> Gerações ilimitadas grátis
+              <button
+                onClick={() => setPixOpen(true)}
+                className="ml-auto text-primary hover:underline font-semibold"
+              >
+                Apoiar ♥
+              </button>
             </p>
           </aside>
 
@@ -606,14 +611,26 @@ const AILabSection = () => {
                 <span className="text-xs text-muted-foreground">
                   {input.length}/500 chars
                 </span>
-                <button
-                  onClick={handleGenerate}
-                  disabled={!input.trim() || isLoading || credits <= 0}
-                  className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
-                >
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Generate
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleEnhance}
+                    disabled={isLoading || enhancing}
+                    title="Otimizar prompt com IA para o gerador atual"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/40 text-primary text-xs font-semibold hover:bg-primary/10 disabled:opacity-40 transition-all"
+                  >
+                    {enhancing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {enhancing ? "Otimizando..." : "Auto-prompt"}
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={!input.trim() || isLoading}
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Generate
+                  </button>
+                </div>
               </div>
               {progress > 0 && (
                 <div className="mt-3 space-y-1">

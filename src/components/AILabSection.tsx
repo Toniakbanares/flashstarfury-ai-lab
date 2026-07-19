@@ -159,19 +159,48 @@ const AILabSection = () => {
     return () => window.clearInterval(id);
   };
 
+  // Optimize the user prompt for the currently selected generator using AI.
+  // Works even with an empty input — will invent an idea for the current mode.
+  const PROMPT_OPTIMIZER: Record<Mode, string> = {
+    image:  "You are a prompt engineer for a text-to-image diffusion model (Flux). Rewrite the user's idea into ONE single vivid English prompt (max 60 words). Include: subject, style, lighting, camera/lens, mood, color palette, high-detail keywords. No lists, no quotes, no preamble — output ONLY the final prompt.",
+    video:  "You are a prompt engineer for a text-to-video model. Rewrite the user's idea into ONE cinematic English prompt (max 55 words) describing subject, motion, camera movement, lens, lighting, mood. Output ONLY the final prompt.",
+    "3d":   "You are a prompt engineer for a 3D render model. Rewrite the user's idea into ONE English prompt (max 50 words) for an isometric octane-style 3D render: subject, materials, lighting, background, camera angle. Output ONLY the final prompt.",
+    avatar: "You are a prompt engineer for AI portraits. Rewrite the user's idea into ONE English prompt (max 45 words) for a centered professional portrait: subject, age/ethnicity if given, expression, wardrobe, background, lighting, lens. Output ONLY the final prompt.",
+    logo:   "You are a prompt engineer for AI logo generation. Rewrite the user's idea into ONE English prompt (max 35 words) for a clean vector logo on white: concept, shape, style (flat/minimal/geometric), color palette. Output ONLY the final prompt.",
+    text:   "You are a writing coach. Turn the user's rough idea into ONE crisp, actionable writing brief (max 40 words) — topic, angle, tone, target reader, desired outcome. Output ONLY the brief.",
+  };
+
+  const handleEnhance = async () => {
+    if (enhancing || isLoading) return;
+    const base = input.trim() || `a creative ${mode} concept`;
+    setEnhancing(true);
+    let out = "";
+    try {
+      await new Promise<void>((resolve) => {
+        streamChat({
+          messages: [{ role: "user", content: base }],
+          mode: PROMPT_OPTIMIZER[mode],
+          onDelta: (c) => { out += c; },
+          onDone: () => resolve(),
+          onError: () => resolve(),
+        });
+      });
+      const cleaned = out.trim().replace(/^["']|["']$/g, "");
+      if (cleaned) {
+        setInput(cleaned.slice(0, 500));
+        toast({ title: "Prompt otimizado ✨" });
+      } else {
+        toast({ title: "Não consegui otimizar", description: "Tente novamente.", variant: "destructive" });
+      }
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!input.trim() || isLoading) return;
     if (input.length > 500) {
       toast({ title: "Prompt muito longo", description: "Máximo 500 caracteres.", variant: "destructive" });
-      return;
-    }
-    if (credits <= 0) {
-      toast({
-        title: "Sem créditos",
-        description: "Você usou seus 5 créditos diários. Apoie via Pix para receber +50 bônus.",
-        variant: "destructive",
-      });
-      setPixOpen(true);
       return;
     }
 

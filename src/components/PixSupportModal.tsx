@@ -8,7 +8,7 @@ import { addBonusCredits, logPixSupport, getBonusCredits } from "@/lib/localStor
 import { copyToClipboard } from "@/lib/share";
 import mascotImg from "@/assets/mascot.png";
 
-const PIX_KEY = "pixelnova-ai@support.pix";
+const PIX_KEY = "starfury-ai@support.pix";
 const BONUS = 50;
 
 export default function PixSupportModal({

@@ -13,7 +13,7 @@ const AppLayout = () => (
       </ErrorBoundary>
     </main>
     <footer className="relative z-10 border-t border-border py-6 text-center text-xs text-muted-foreground">
-      <p className="font-heading">⚡ StarFury AI © 2026 — Create Anything With AI</p>
+      <p className="font-heading">⚡ StarFury AI © 2026 — Create Anything With AI Tools</p>
     </footer>
   </div>
 );

@@ -51,9 +51,9 @@ const Tools = () => {
   const { liked, toggle: toggleLike } = useToolLikes(tools.map(t => t.id));
 
   useEffect(() => {
-    document.title = "AI Tools Marketplace — PixelNova AI";
+    document.title = "AI Tools Marketplace — StarFury AI";
     const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute("content", "Discover the best AI tools — image, video, writing, automation, marketing & income. Curated marketplace by PixelNova AI.");
+    if (meta) meta.setAttribute("content", "Discover the best AI tools — image, video, writing, automation, marketing & income. Curated marketplace by StarFury AI.");
     supabase.from("offers").select("*").eq("is_active", true)
       .then(({ data }) => {
         const remote = (data as Tool[]) ?? [];

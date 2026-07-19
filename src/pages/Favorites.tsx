@@ -38,7 +38,7 @@ const Favorites = () => {
   };
 
   useEffect(() => {
-    document.title = "My Favorite AI Tools — PixelNova AI";
+    document.title = "My Favorite AI Tools — StarFury AI";
     load();
     const onStore = () => load();
     window.addEventListener(STORE_EVENT, onStore);

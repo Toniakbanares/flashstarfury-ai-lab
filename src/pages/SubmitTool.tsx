@@ -64,7 +64,7 @@ const SubmitTool = () => {
         </div>
         <h1 className="font-heading text-3xl font-bold gradient-text">Add your AI tool</h1>
         <p className="text-muted-foreground mt-2 text-sm">
-          Share an AI tool with the PixelNova community. Submissions appear instantly in the marketplace.
+          Share an AI tool with the StarFury community. Submissions appear instantly in the marketplace.
         </p>
       </header>
 

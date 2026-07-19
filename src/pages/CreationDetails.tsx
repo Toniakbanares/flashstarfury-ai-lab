@@ -29,7 +29,7 @@ const CreationDetails = () => {
       if (!data) { setLoading(false); return; }
       setGen(data);
       // SEO
-      document.title = `${data.prompt.slice(0, 60)} | PixelNova AI`;
+      document.title = `${data.prompt.slice(0, 60)} | StarFury AI`;
       const { data: rel } = await supabase
         .from("generations")
         .select("*, profiles(display_name, avatar_url)")
@@ -53,7 +53,7 @@ const CreationDetails = () => {
   if (!gen) return <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">Criação não encontrada.</div>;
 
   const publicUrl = `${window.location.origin}/create/${gen.id}`;
-  const links = shareLinks(publicUrl, `Confira esta criação no PixelNova AI: ${gen.prompt.slice(0, 80)}`);
+  const links = shareLinks(publicUrl, `Confira esta criação no StarFury AI: ${gen.prompt.slice(0, 80)}`);
   const creator = gen.profiles?.display_name || "Anônimo";
 
   return (

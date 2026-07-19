@@ -35,7 +35,7 @@ const ToolDetails = () => {
       const local = getSubmittedTools().find(t => t.slug === slug || t.id === slug);
       if (local) {
         setTool({ ...local, long_description: null, benefits: null } as unknown as Tool);
-        document.title = `${local.title} — AI Tool | PixelNova AI`;
+        document.title = `${local.title} — AI Tool | StarFury AI`;
         return;
       }
       let { data } = await supabase.from("offers").select("*").eq("slug", slug).maybeSingle();
@@ -45,7 +45,7 @@ const ToolDetails = () => {
       }
       if (!data) return;
       setTool(data as Tool);
-      document.title = `${data.title} — AI Tool | PixelNova AI`;
+      document.title = `${data.title} — AI Tool | StarFury AI`;
       const meta = document.querySelector('meta[name="description"]');
       if (meta) meta.setAttribute("content", data.description);
       supabase.rpc("increment_offer_views", { _offer_id: data.id });

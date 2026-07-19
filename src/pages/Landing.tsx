@@ -16,9 +16,9 @@ const Landing = () => (
   <div className="space-y-16 pb-12">
     {/* Hero */}
     <section className="container mx-auto px-4 pt-16 text-center">
-      <img src={mascotImg} alt="PixelNova" className="h-20 w-20 mx-auto mb-4 animate-float" />
+      <img src={mascotImg} alt="StarFury" className="h-20 w-20 mx-auto mb-4 animate-float" />
       <h1 className="font-heading text-4xl md:text-5xl font-bold gradient-text mb-4">
-        Create Anything With AI
+        Create Anything With AI Tools
       </h1>
       <p className="text-muted-foreground max-w-lg mx-auto mb-8 text-lg">
         Gere imagens, textos, código e muito mais. 100% grátis, sem limites escondidos.

@@ -43,7 +43,7 @@ const internalToolFor = (category: string): { path: string; label: string } => {
   if (c.includes("avatar")) return { path: "/ai-avatar-generator", label: "AI Avatar Generator" };
   if (c.includes("art")) return { path: "/ai-art-generator", label: "AI Art Generator" };
   if (c.includes("image") || c.includes("photo")) return { path: "/ai-image-generator", label: "AI Image Generator" };
-  return { path: "/tools", label: "PixelNova AI Studio" };
+  return { path: "/tools", label: "StarFury AI Studio" };
 };
 
 const OfferDetails = () => {
@@ -56,7 +56,7 @@ const OfferDetails = () => {
     supabase.from("offers").select("*").eq("id", id).single().then(({ data }) => {
       if (data) {
         setOffer(data as Offer);
-        document.title = `${data.title} — PixelNova AI`;
+        document.title = `${data.title} — StarFury AI`;
         const meta = document.querySelector('meta[name="description"]');
         if (meta) meta.setAttribute("content", data.description);
         supabase
@@ -113,7 +113,7 @@ const OfferDetails = () => {
           <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild size="lg">
               <Link to={tryInsideUrl}>
-                <Sparkles className="h-4 w-4" /> Try inside PixelNova AI
+                <Sparkles className="h-4 w-4" /> Try inside StarFury AI
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -233,7 +233,7 @@ const OfferDetails = () => {
         {/* 5. CONNECT WITH TOOLS */}
         <section className="rounded-xl border border-primary/30 bg-primary/5 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
           <div>
-            <h2 className="font-heading text-lg font-bold mb-1">Try it inside PixelNova AI</h2>
+            <h2 className="font-heading text-lg font-bold mb-1">Try it inside StarFury AI</h2>
             <p className="text-sm text-muted-foreground">
               Open the {internalTool.label} with this idea pre-filled and start creating in seconds.
             </p>
@@ -304,7 +304,7 @@ const OfferDetails = () => {
       {/* 10. RELATED TOOLS */}
       {related.length > 0 && (
         <section className="mt-10">
-          <h2 className="font-heading text-xl font-bold mb-4">Similar tools on PixelNova AI</h2>
+          <h2 className="font-heading text-xl font-bold mb-4">Similar tools on StarFury AI</h2>
           <div className="grid gap-4 md:grid-cols-3">
             {related.map((r) => (
               <Link

@@ -440,7 +440,7 @@ const AILabSection = () => {
         <div className="flex items-center gap-3 mb-3">
           <img src={mascotImg} alt="Lumy" className="h-10 w-10 animate-float" width={40} height={40} />
           <div className="flex-1">
-            <h2 className="font-heading text-2xl font-bold gradient-text">PixelNova AI Studio</h2>
+            <h2 className="font-heading text-2xl font-bold gradient-text">StarFury AI Studio</h2>
             <p className="text-xs text-muted-foreground">{activeMode.hint}</p>
           </div>
           <button

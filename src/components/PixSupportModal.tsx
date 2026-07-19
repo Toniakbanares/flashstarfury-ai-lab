@@ -104,14 +104,13 @@ export default function PixSupportModal({
           {paid ? (
             <><Check className="h-4 w-4" /> Obrigado!</>
           ) : (
-            <><Heart className="h-4 w-4" /> Já paguei — receber +{BONUS} créditos</>
+            <><Heart className="h-4 w-4" /> Confirmar apoio voluntário</>
           )}
         </Button>
 
         <p className="text-[10px] text-center text-muted-foreground flex items-center justify-center gap-1">
           <Sparkles className="h-3 w-3 text-primary" />
-          Créditos bônus são salvos localmente no seu navegador. Saldo atual:{" "}
-          {getBonusCredits()}
+          Qualquer valor é bem-vindo. Sem obrigação, sem cobrança automática.
         </p>
       </DialogContent>
     </Dialog>

@@ -79,6 +79,7 @@ const AILabSection = () => {
   const [lastLocalId, setLastLocalId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
 
   // Controls
   const [imgModel, setImgModel] = useState<string>("flux");

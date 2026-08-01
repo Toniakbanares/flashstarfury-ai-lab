@@ -1,24 +1,26 @@
-// Idea engine for the AI Music Studio.
-// Presets are editable and combinations are effectively infinite.
+// Idea engine for the AI Music Studio — simplified, fast, human-first.
 
 export const GENRES = [
-  "Pop", "Indie Pop", "Rock", "Hard Rock", "Alternative", "Hip Hop", "Trap", "R&B",
-  "Soul", "Funk", "Sertanejo", "MPB", "Samba", "Pagode", "Forró", "Bossa Nova",
-  "Reggae", "Reggaeton", "Country", "Folk", "Blues", "Jazz", "Gospel", "Worship",
-  "Lo-fi", "Synthwave", "House", "Techno", "Drum & Bass", "Afrobeat", "K-Pop",
-  "Metal", "Punk", "Ambient", "Cinematic", "Phonk", "Bolero", "Cumbia",
+  // 2026 / new wave
+  "Punk", "Punk Rock", "Pop Punk", "Aura", "Aura Pop", "Hyperpop", "Phonk", "Rage",
+  "Sertanejo Bruto", "Trap Melódico", "Funk Mandelão", "Afro House", "Amapiano",
+  "Indie Sleaze", "Drill", "Emo Rap", "Neo Soul", "Synthwave", "Lo-fi",
+  // classics
+  "Pop", "Rock", "Hard Rock", "Hip Hop", "R&B", "Soul", "Funk", "MPB",
+  "Samba", "Pagode", "Forró", "Bossa Nova", "Reggae", "Country", "Folk",
+  "Blues", "Jazz", "Gospel", "Worship", "Metal", "Bolero",
 ] as const;
 
 export const MOODS = [
   "Melancólico", "Eufórico", "Romântico", "Nostálgico", "Sombrio", "Esperançoso",
   "Raivoso", "Sensual", "Épico", "Relaxante", "Motivacional", "Solitário",
-  "Festivo", "Introspectivo", "Dramático", "Doce", "Rebelde",
+  "Festivo", "Introspectivo", "Rebelde", "Caótico", "Etéreo",
 ] as const;
 
 export const VOICES = [
-  "Voz masculina grave", "Voz masculina suave", "Voz feminina potente",
-  "Voz feminina suave", "Dueto masculino/feminino", "Coral gospel",
-  "Rap falado", "Voz sussurrada", "Voz rasgada/rouca", "Vocal andrógino",
+  "Voz masculina grave", "Voz feminina potente", "Voz feminina suave",
+  "Dueto masculino/feminino", "Rap falado", "Voz rasgada/rouca (punk)",
+  "Voz sussurrada", "Coral gospel", "Vocal etéreo com reverb (aura)",
 ] as const;
 
 export const TEMPOS = [
@@ -26,37 +28,39 @@ export const TEMPOS = [
   { id: "slow", label: "Lento (76-95 BPM)", bpm: 85 },
   { id: "mid", label: "Médio (96-115 BPM)", bpm: 105 },
   { id: "upbeat", label: "Animado (116-135 BPM)", bpm: 124 },
-  { id: "fast", label: "Rápido (136-165 BPM)", bpm: 148 },
+  { id: "fast", label: "Rápido (136-180 BPM)", bpm: 160 },
 ] as const;
 
-export const LANGUAGES = ["Português", "English", "Español", "Français", "Italiano"] as const;
+export const LANGUAGES = ["Português", "English", "Español"] as const;
 
 export const STRUCTURES = [
   "Intro / Verso / Pré-refrão / Refrão / Verso / Refrão / Ponte / Refrão final",
   "Verso / Refrão / Verso / Refrão / Ponte / Refrão",
-  "Intro / Verso / Refrão / Verso / Refrão / Outro",
   "Hook / Verso / Hook / Verso / Bridge / Hook",
 ] as const;
 
+// Human, specific, cinematic themes — no generic clichés.
 export const THEMES = [
-  "um amor que terminou por orgulho",
-  "voltar à cidade natal depois de anos",
-  "recomeçar do zero aos 30",
-  "amizade que virou algo mais",
-  "superar a ansiedade numa madrugada",
-  "a última conversa com um pai",
-  "viagem de estrada com a pessoa amada",
-  "sair da pobreza e não esquecer de onde veio",
-  "amor à distância e fuso horário",
-  "festa onde você se sente sozinho",
-  "carta que nunca foi enviada",
-  "fé em meio ao caos",
-  "primeiro beijo debaixo de chuva",
-  "traição descoberta por acaso",
-  "orgulho de ser quem você é",
-  "verão que mudou tudo",
-  "insônia e pensamentos às 3 da manhã",
-  "reencontro dez anos depois",
+  "o cheiro do casaco dela ainda no banco do carro",
+  "gritar num show até a voz sumir pra não pensar nele",
+  "voltar pra casa dos pais e o quarto continuar igual",
+  "trabalhar em dois empregos e ainda sonhar alto",
+  "a última mensagem digitada e nunca enviada",
+  "a chuva às 4h e o ônibus vazio depois da festa",
+  "cortar o cabelo depois do término",
+  "amizade que virou algo mais numa viagem de estrada",
+  "o dia em que você parou de pedir desculpa por existir",
+  "insônia, teto branco e pensamentos altos demais",
+  "briga com o pai e o silêncio de dez anos",
+  "primeiro salário e a mão tremendo no caixa",
+  "amor à distância medido em fuso horário",
+  "quebrar a garrafa no muro e chamar isso de liberdade",
+  "a cidade queimando de calor e a gente sem dinheiro",
+  "reencontro no velório de um amigo em comum",
+  "escrever o nome dela na janela embaçada",
+  "sair do interior com uma mochila e 200 reais",
+  "fé encontrada num hospital às 3 da manhã",
+  "dançar sozinho na cozinha às 2h com o fone no talo",
 ];
 
 export type SongIdea = {
@@ -87,44 +91,42 @@ export function randomIdea(partial: Partial<SongIdea> = {}): SongIdea {
   };
 }
 
-// Curated starting points — each one is fully editable after being loaded.
+export function randomTheme(current?: string): string {
+  let t = pick(THEMES);
+  for (let i = 0; i < 5 && t === current; i++) t = pick(THEMES);
+  return t;
+}
+
+// One-click styles — everything else is auto-filled.
 export const PRESETS: { name: string; idea: SongIdea }[] = [
   {
-    name: "Balada pop emotiva",
-    idea: { genre: "Pop", mood: "Melancólico", voice: "Voz feminina suave", tempo: TEMPOS[0].label, bpm: 68, language: "Português", structure: STRUCTURES[0], theme: "um amor que terminou por orgulho" },
+    name: "Punk raivoso",
+    idea: { genre: "Punk", mood: "Rebelde", voice: "Voz rasgada/rouca (punk)", tempo: TEMPOS[4].label, bpm: 168, language: "Português", structure: STRUCTURES[1], theme: "quebrar a garrafa no muro e chamar isso de liberdade" },
+  },
+  {
+    name: "Pop punk 2026",
+    idea: { genre: "Pop Punk", mood: "Eufórico", voice: "Voz masculina grave", tempo: TEMPOS[3].label, bpm: 132, language: "Português", structure: STRUCTURES[0], theme: "gritar num show até a voz sumir pra não pensar nele" },
+  },
+  {
+    name: "Aura etérea",
+    idea: { genre: "Aura", mood: "Etéreo", voice: "Vocal etéreo com reverb (aura)", tempo: TEMPOS[1].label, bpm: 90, language: "Português", structure: STRUCTURES[2], theme: "dançar sozinho na cozinha às 2h com o fone no talo" },
   },
   {
     name: "Sertanejo sofrência",
-    idea: { genre: "Sertanejo", mood: "Nostálgico", voice: "Voz masculina grave", tempo: TEMPOS[1].label, bpm: 88, language: "Português", structure: STRUCTURES[1], theme: "a última mensagem apagada às 3 da manhã" },
+    idea: { genre: "Sertanejo Bruto", mood: "Nostálgico", voice: "Voz masculina grave", tempo: TEMPOS[1].label, bpm: 88, language: "Português", structure: STRUCTURES[1], theme: "a última mensagem digitada e nunca enviada" },
   },
   {
-    name: "Trap motivacional",
-    idea: { genre: "Trap", mood: "Motivacional", voice: "Rap falado", tempo: TEMPOS[2].label, bpm: 140, language: "Português", structure: STRUCTURES[3], theme: "sair da pobreza e não esquecer de onde veio" },
+    name: "Trap melódico",
+    idea: { genre: "Trap Melódico", mood: "Motivacional", voice: "Rap falado", tempo: TEMPOS[2].label, bpm: 142, language: "Português", structure: STRUCTURES[2], theme: "sair do interior com uma mochila e 200 reais" },
   },
   {
-    name: "Indie verão",
-    idea: { genre: "Indie Pop", mood: "Esperançoso", voice: "Dueto masculino/feminino", tempo: TEMPOS[3].label, bpm: 120, language: "English", structure: STRUCTURES[1], theme: "verão que mudou tudo" },
-  },
-  {
-    name: "Worship intimista",
-    idea: { genre: "Worship", mood: "Introspectivo", voice: "Coral gospel", tempo: TEMPOS[0].label, bpm: 72, language: "Português", structure: STRUCTURES[2], theme: "fé em meio ao caos" },
-  },
-  {
-    name: "R&B sensual noturno",
-    idea: { genre: "R&B", mood: "Sensual", voice: "Voz feminina potente", tempo: TEMPOS[1].label, bpm: 92, language: "English", structure: STRUCTURES[1], theme: "amor à distância e fuso horário" },
-  },
-  {
-    name: "Rock épico de arena",
-    idea: { genre: "Rock", mood: "Épico", voice: "Voz rasgada/rouca", tempo: TEMPOS[3].label, bpm: 128, language: "English", structure: STRUCTURES[0], theme: "recomeçar do zero aos 30" },
-  },
-  {
-    name: "Lo-fi madrugada",
-    idea: { genre: "Lo-fi", mood: "Solitário", voice: "Voz sussurrada", tempo: TEMPOS[1].label, bpm: 80, language: "Português", structure: STRUCTURES[2], theme: "insônia e pensamentos às 3 da manhã" },
+    name: "Balada pop emotiva",
+    idea: { genre: "Pop", mood: "Melancólico", voice: "Voz feminina suave", tempo: TEMPOS[0].label, bpm: 68, language: "Português", structure: STRUCTURES[0], theme: "cortar o cabelo depois do término" },
   },
 ];
 
 export function buildStylePrompt(i: SongIdea): string {
-  return `${i.genre}, ${i.mood.toLowerCase()}, ${i.voice.toLowerCase()}, ${i.bpm} BPM, produção moderna de alta fidelidade, mix comercial, dinâmica humana com respirações naturais e pequenas imperfeições vocais`;
+  return `${i.genre}, ${i.mood.toLowerCase()}, ${i.voice.toLowerCase()}, ${i.bpm} BPM, produção moderna 2026 de alta fidelidade, mix comercial, dinâmica humana com respirações naturais e pequenas imperfeições vocais`;
 }
 
 export function buildSongBrief(i: SongIdea, extra?: string): string {
@@ -140,17 +142,26 @@ export function buildSongBrief(i: SongIdea, extra?: string): string {
   ].filter(Boolean).join("\n");
 }
 
-export const SONG_SYSTEM = `Você é um compositor profissional premiado, especialista em música comercial que emociona e viraliza.
-Escreva letras HUMANAS: linguagem coloquial, imagens concretas e sensoriais, detalhes específicos (objetos, lugares, horas, cheiros), e não clichês genéricos.
-Regras:
-- Respeite exatamente a estrutura pedida, marcando cada seção com [Intro], [Verso 1], [Pré-refrão], [Refrão], [Ponte], [Outro] etc.
-- O refrão deve ser curto, cantável e repetível, com um gancho memorável.
-- Métrica consistente e rimas naturais (evite rimas forçadas ou pobres).
-- Escreva a letra no idioma pedido.
-- Não explique nada. Não use markdown de título. Devolva apenas a música.
-Formato de saída:
-TÍTULO: <título>
-[seções com a letra]
+export const SONG_SYSTEM = `Você é um compositor hitmaker premiado (nível Grammy/Latin Grammy), com ouvido para o que toca em 2026.
+Sua missão: escrever uma MÚSICA PRONTA PARA GRAVAR — não um rascunho, não um esboço genérico de IA.
+
+Como escrever de forma HUMANA:
+- Fale como gente fala: gírias naturais, frases curtas, contrações, respiração.
+- Use detalhes concretos e sensoriais (objetos, horas, cheiros, ruas, marcas, gestos) em vez de abstrações ("dor", "saudade", "coração").
+- Mostre a cena, não explique o sentimento. Uma imagem forte vale mais que dez adjetivos.
+- Ponto de vista específico, com contradição e imperfeição humana. Nada de moral no final.
+- PROIBIDO: "coração partido", "lágrimas caem", "estrelas no céu", "jornada", "para sempre", "meu mundo desabou" e clichês equivalentes.
+- Rimas naturais (inclusive toantes), métrica cantável, refrão curto e viciante.
+- Respeite o gênero: punk = cru, curto, gritado, atitude; aura = etéreo, repetitivo, hipnótico, poucas palavras; trap = flow e cadência; sertanejo = história direta e dor honesta.
+
+Regras de saída:
+- Siga exatamente a estrutura pedida, marcando seções: [Intro], [Verso 1], [Pré-refrão], [Refrão], [Ponte], [Outro].
+- Escreva no idioma pedido.
+- Não explique nada, não use markdown de título.
+
+Formato exato:
+TÍTULO: <título original e marcante>
+[seções com a letra completa]
 ---
-PROMPT DE ESTILO: <uma linha em inglês, pronta para colar em geradores de música por IA (Suno/Udio), descrevendo gênero, instrumentação, voz, BPM, mix>
+PROMPT DE ESTILO: <uma linha em inglês, pronta para colar no Suno/Udio: gênero, instrumentação, tipo de voz, BPM, referência de mix>
 TAGS: <6 tags separadas por vírgula>`;

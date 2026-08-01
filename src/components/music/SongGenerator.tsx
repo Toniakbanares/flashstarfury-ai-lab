@@ -1,12 +1,15 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2, Sparkles, Shuffle, Copy, Download, Save, Square, Wand2 } from "lucide-react";
+import { Loader2, Sparkles, Shuffle, Copy, Download, Save, Square, Wand2, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { askAIStream, AiError } from "@/lib/musicAi";
 import { saveProject, downloadText } from "@/lib/musicStore";
 import {
   GENRES, MOODS, VOICES, TEMPOS, LANGUAGES, STRUCTURES, PRESETS,
-  randomIdea, buildSongBrief, buildStylePrompt, SONG_SYSTEM, type SongIdea,
+  randomIdea, randomTheme, buildSongBrief, buildStylePrompt, SONG_SYSTEM, type SongIdea,
 } from "@/lib/musicIdeas";
+
+const inputCls =
+  "mt-1 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <label className="block">
@@ -15,14 +18,12 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </label>
 );
 
-const selectCls =
-  "mt-1 w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
-
 const SongGenerator = () => {
   const [idea, setIdea] = useState<SongIdea>(() => PRESETS[0].idea);
   const [extra, setExtra] = useState("");
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const set = <K extends keyof SongIdea>(k: K, v: SongIdea[K]) => setIdea((i) => ({ ...i, [k]: v }));
@@ -36,6 +37,10 @@ const SongGenerator = () => {
 
   const generate = async () => {
     if (busy) return;
+    if (!idea.theme.trim()) {
+      toast.error("Escreva um tema (ou clique em Surpreenda-me)");
+      return;
+    }
     setBusy(true);
     setOutput("");
     const ctrl = new AbortController();
@@ -43,7 +48,7 @@ const SongGenerator = () => {
     try {
       await askAIStream(
         SONG_SYSTEM,
-        `Componha uma música completa e original com base neste briefing:\n\n${buildSongBrief(idea, extra)}`,
+        `Componha uma música completa, original e profissional com base neste briefing:\n\n${buildSongBrief(idea, extra)}`,
         setOutput,
         ctrl.signal,
       );
@@ -68,6 +73,8 @@ const SongGenerator = () => {
     toast.success("Nova ideia gerada");
   };
 
+  const newTheme = () => set("theme", randomTheme(idea.theme));
+
   const copy = async (text: string, what: string) => {
     if (!text.trim()) return;
     try {
@@ -88,18 +95,30 @@ const SongGenerator = () => {
     }
   };
 
+  const download = () => {
+    try {
+      downloadText(output, `${title.replace(/[^\w\s-]/g, "").slice(0, 40) || "musica"}.txt`);
+    } catch {
+      toast.error("Não foi possível baixar o arquivo");
+    }
+  };
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      {/* Controls */}
+      {/* Controls — simple by default */}
       <div className="space-y-4">
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Ideias prontas</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Estilo em 1 clique</h4>
           <div className="flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
               <button
                 key={p.name}
-                onClick={() => { setIdea(p.idea); toast.success(`Ideia "${p.name}" carregada`); }}
-                className="rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium text-foreground hover:border-primary/40 hover:bg-primary/10 transition"
+                onClick={() => { setIdea(p.idea); toast.success(`"${p.name}" carregado`); }}
+                className={`rounded-full border px-3 py-1 text-[11px] font-medium transition ${
+                  idea.genre === p.idea.genre
+                    ? "border-primary/50 bg-primary/15 text-primary"
+                    : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/10"
+                }`}
               >
                 {p.name}
               </button>
@@ -113,58 +132,77 @@ const SongGenerator = () => {
           </div>
         </div>
 
+        <Field label="Tema / história da música">
+          <textarea
+            value={idea.theme}
+            onChange={(e) => set("theme", e.target.value)}
+            placeholder="ex.: o cheiro do casaco dela ainda no banco do carro"
+            className="mt-1 w-full h-20 resize-none rounded-lg border border-border bg-card p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </Field>
+        <button onClick={newTheme} className="-mt-2 text-[11px] text-primary hover:underline">
+          Sugerir outro tema humano
+        </button>
+
         <div className="grid grid-cols-2 gap-2">
           <Field label="Estilo / Gênero">
-            <input list="sf-genres" value={idea.genre} onChange={(e) => set("genre", e.target.value)} className={selectCls} />
+            <input list="sf-genres" value={idea.genre} onChange={(e) => set("genre", e.target.value)} className={inputCls} />
             <datalist id="sf-genres">{GENRES.map((g) => <option key={g} value={g} />)}</datalist>
           </Field>
-          <Field label="Clima">
-            <input list="sf-moods" value={idea.mood} onChange={(e) => set("mood", e.target.value)} className={selectCls} />
-            <datalist id="sf-moods">{MOODS.map((m) => <option key={m} value={m} />)}</datalist>
-          </Field>
-          <Field label="Voz">
-            <input list="sf-voices" value={idea.voice} onChange={(e) => set("voice", e.target.value)} className={selectCls} />
-            <datalist id="sf-voices">{VOICES.map((v) => <option key={v} value={v} />)}</datalist>
-          </Field>
-          <Field label="Andamento">
-            <select
-              value={idea.tempo}
-              onChange={(e) => {
-                const t = TEMPOS.find((x) => x.label === e.target.value)!;
-                setIdea((i) => ({ ...i, tempo: t.label, bpm: t.bpm }));
-              }}
-              className={selectCls}
-            >
-              {TEMPOS.map((t) => <option key={t.id} value={t.label}>{t.label}</option>)}
-            </select>
-          </Field>
           <Field label="Idioma">
-            <select value={idea.language} onChange={(e) => set("language", e.target.value)} className={selectCls}>
+            <select value={idea.language} onChange={(e) => set("language", e.target.value)} className={inputCls}>
               {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
           </Field>
-          <Field label="BPM">
-            <input type="number" min={40} max={200} value={idea.bpm}
-              onChange={(e) => set("bpm", Number(e.target.value) || 100)} className={selectCls} />
-          </Field>
         </div>
 
-        <Field label="Estrutura">
-          <select value={idea.structure} onChange={(e) => set("structure", e.target.value)} className={selectCls}>
-            {STRUCTURES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </Field>
+        <button
+          onClick={() => setAdvanced((a) => !a)}
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          <SlidersHorizontal className="h-3 w-3" /> {advanced ? "Ocultar ajustes avançados" : "Ajustes avançados"}
+        </button>
 
-        <Field label="Tema / História (edite livremente)">
-          <textarea value={idea.theme} onChange={(e) => set("theme", e.target.value)}
-            className="mt-1 w-full h-20 resize-none rounded-lg border border-border bg-card p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40" />
-        </Field>
-
-        <Field label="Instruções extras (opcional)">
-          <input value={extra} onChange={(e) => setExtra(e.target.value)}
-            placeholder="ex.: refrão com só 4 palavras, citar o mar, evitar clichês"
-            className={selectCls} />
-        </Field>
+        {advanced && (
+          <div className="space-y-2 rounded-lg border border-border bg-card/50 p-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Clima">
+                <input list="sf-moods" value={idea.mood} onChange={(e) => set("mood", e.target.value)} className={inputCls} />
+                <datalist id="sf-moods">{MOODS.map((m) => <option key={m} value={m} />)}</datalist>
+              </Field>
+              <Field label="Voz">
+                <input list="sf-voices" value={idea.voice} onChange={(e) => set("voice", e.target.value)} className={inputCls} />
+                <datalist id="sf-voices">{VOICES.map((v) => <option key={v} value={v} />)}</datalist>
+              </Field>
+              <Field label="Andamento">
+                <select
+                  value={idea.tempo}
+                  onChange={(e) => {
+                    const t = TEMPOS.find((x) => x.label === e.target.value);
+                    if (t) setIdea((i) => ({ ...i, tempo: t.label, bpm: t.bpm }));
+                  }}
+                  className={inputCls}
+                >
+                  {TEMPOS.map((t) => <option key={t.id} value={t.label}>{t.label}</option>)}
+                </select>
+              </Field>
+              <Field label="BPM">
+                <input type="number" min={40} max={220} value={idea.bpm}
+                  onChange={(e) => set("bpm", Number(e.target.value) || 100)} className={inputCls} />
+              </Field>
+            </div>
+            <Field label="Estrutura">
+              <select value={idea.structure} onChange={(e) => set("structure", e.target.value)} className={inputCls}>
+                {STRUCTURES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </Field>
+            <Field label="Instruções extras (opcional)">
+              <input value={extra} onChange={(e) => setExtra(e.target.value)}
+                placeholder="ex.: refrão com 4 palavras, citar o mar, sem clichês"
+                className={inputCls} />
+            </Field>
+          </div>
+        )}
 
         <div className="rounded-lg border border-border bg-card p-2.5">
           <div className="flex items-center justify-between">
@@ -195,7 +233,7 @@ const SongGenerator = () => {
           <div className="flex gap-1.5">
             <button onClick={() => copy(output, "Letra")} disabled={!output} title="Copiar"
               className="rounded-md border border-border p-1.5 hover:border-primary/40 disabled:opacity-40"><Copy className="h-3.5 w-3.5" /></button>
-            <button onClick={() => downloadText(output, `${title.replace(/[^\w\s-]/g, "").slice(0, 40) || "musica"}.txt`)} disabled={!output} title="Baixar"
+            <button onClick={download} disabled={!output} title="Baixar"
               className="rounded-md border border-border p-1.5 hover:border-primary/40 disabled:opacity-40"><Download className="h-3.5 w-3.5" /></button>
             <button onClick={save} disabled={!output} title="Salvar"
               className="rounded-md border border-border p-1.5 hover:border-primary/40 disabled:opacity-40"><Save className="h-3.5 w-3.5" /></button>
@@ -204,7 +242,7 @@ const SongGenerator = () => {
           </div>
         </div>
         <pre className="flex-1 overflow-auto whitespace-pre-wrap font-body text-sm text-foreground">
-          {output || "Escolha uma ideia (ou clique em Surpreenda-me), ajuste o estilo e gere uma música completa com título, letra estruturada, prompt de estilo e tags."}
+          {output || "Escolha um estilo (Punk, Aura, Trap…), ajuste o tema e gere uma música completa: título, letra humana estruturada, prompt para Suno/Udio e tags."}
         </pre>
       </div>
     </div>

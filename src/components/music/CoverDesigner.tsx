@@ -10,15 +10,27 @@ const CoverDesigner = () => {
   const [busy, setBusy] = useState(false);
 
   const run = async () => {
-    if (!prompt.trim()) { toast.error("Describe the cover art."); return; }
+    if (!prompt.trim()) { toast.error("Descreva a capa do álbum."); return; }
     setBusy(true); setUrl("");
+    const full = `Square album cover artwork, professional, high detail: ${prompt}`;
     try {
-      const res = await generateCover(`Square album cover artwork, professional, high detail: ${prompt}`);
-      if (res.imageUrl) setUrl(res.imageUrl);
-      else toast.error(res.error || "No image returned");
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      const res = await generateCover(full);
+      if (res?.imageUrl) setUrl(res.imageUrl);
+      else throw new Error(res?.error || "Nenhuma imagem retornada");
+    } catch (e) {
+      // Free fallback so the tool never dead-ends.
+      try {
+        const fallback = pollinationsImage(full, { width: 1024, height: 1024 });
+        await preloadImage(fallback);
+        setUrl(fallback);
+        toast("Gerado com provedor alternativo");
+      } catch {
+        toast.error(e instanceof Error ? e.message : "Falha ao gerar a capa");
+      }
+    }
     setBusy(false);
   };
+
 
   const download = async () => {
     if (!url) return;

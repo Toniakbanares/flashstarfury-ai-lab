@@ -27,7 +27,7 @@ const TABS = [
 
 
 const MusicStudio = () => {
-  const [active, setActive] = useState<typeof TABS[number]["id"]>("generator");
+  const [active, setActive] = useState<typeof TABS[number]["id"]>("composer");
 
 
   useEffect(() => {

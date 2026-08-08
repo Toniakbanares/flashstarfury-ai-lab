@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Music, Feather, FileText, Guitar, ScrollText, Rocket, ImageIcon, Database, LayoutDashboard, Sparkles } from "lucide-react";
+import { Music, Feather, FileText, Guitar, ScrollText, Rocket, ImageIcon, Database, LayoutDashboard, Sparkles, MessageSquare } from "lucide-react";
+import SongComposerChat from "@/components/music/SongComposerChat";
 import SongGenerator from "@/components/music/SongGenerator";
 import Songwriter from "@/components/music/Songwriter";
 import LyricsTools from "@/components/music/LyricsTools";
@@ -11,7 +12,9 @@ import MetadataTab from "@/components/music/MetadataTab";
 import MusicDashboard from "@/components/music/MusicDashboard";
 
 const TABS = [
+  { id: "composer", label: "Compositor IA", icon: MessageSquare, Comp: SongComposerChat },
   { id: "generator", label: "Gerar Música", icon: Sparkles, Comp: SongGenerator },
+
   { id: "songwriter", label: "Songwriter", icon: Feather, Comp: Songwriter },
   { id: "lyrics", label: "Lyrics Tools", icon: FileText, Comp: LyricsTools },
   { id: "chords", label: "Chords & Tabs", icon: Guitar, Comp: ChordsTabs },
@@ -24,7 +27,7 @@ const TABS = [
 
 
 const MusicStudio = () => {
-  const [active, setActive] = useState<typeof TABS[number]["id"]>("generator");
+  const [active, setActive] = useState<typeof TABS[number]["id"]>("composer");
 
 
   useEffect(() => {

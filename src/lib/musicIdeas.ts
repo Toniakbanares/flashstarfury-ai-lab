@@ -165,3 +165,60 @@ TÍTULO: <título original e marcante>
 ---
 PROMPT DE ESTILO: <uma linha em inglês, pronta para colar no Suno/Udio: gênero, instrumentação, tipo de voz, BPM, referência de mix>
 TAGS: <6 tags separadas por vírgula>`;
+
+// ---------------------------------------------------------------------------
+// One-prompt composer (chat) — magic prompt + universal style expert
+// ---------------------------------------------------------------------------
+
+export const QUICK_STYLES: { label: string; prompt: string }[] = [
+  { label: "Punk", prompt: "Uma música punk crua e rápida, guitarra suja e vocal gritado, sobre largar o emprego numa sexta à noite." },
+  { label: "Pop", prompt: "Uma música pop moderna 2026, refrão viciante e produção limpa, sobre reencontrar alguém num aeroporto." },
+  { label: "Pop Rock", prompt: "Uma música pop rock com energia de estádio e guitarras grandes, sobre voltar pra cidade onde você cresceu." },
+  { label: "Metal", prompt: "Uma música metal pesada, riffs em palm mute e bateria dupla, sobre encarar o próprio medo de frente." },
+  { label: "Nu Metal", prompt: "Uma música nu metal com groove pesado, alternando rap e refrão gritado, sobre raiva guardada desde a adolescência." },
+  { label: "Trap", prompt: "Uma música trap melódica com 808 e hi-hats rápidos, sobre sair do zero e não esquecer de onde veio." },
+  { label: "Sertanejo", prompt: "Uma música sertanejo sofrência, sanfona e voz rasgada, sobre a última mensagem digitada e nunca enviada." },
+  { label: "Aura / Etéreo", prompt: "Uma música estilo aura, etérea e hipnótica, com vocal em reverb e poucas palavras, sobre dançar sozinho às 2h da manhã." },
+  { label: "Rap", prompt: "Uma música rap com flow afiado e rimas internas, sobre o primeiro salário e a mão tremendo no caixa." },
+  { label: "Gospel", prompt: "Uma música gospel emocionante com coral, sobre fé encontrada num hospital às 3 da manhã." },
+];
+
+const SEEDS = [
+  "um objeto esquecido que carrega uma história inteira",
+  "uma decisão tomada às 4 da manhã",
+  "uma cidade pequena vista pela janela de um ônibus",
+  "uma amizade que acabou sem briga",
+  "o barulho da casa vazia depois que todo mundo foi embora",
+  "uma promessa feita por criança e lembrada adulto",
+  "o último dia de um emprego que consumiu anos",
+  "um amor que só existiu em mensagens",
+  "voltar a um lugar e perceber que você mudou",
+  "uma festa onde você foi o mais solitário da sala",
+];
+
+export function randomSeedIdea(): string {
+  const seed = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+  const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
+  const mood = MOODS[Math.floor(Math.random() * MOODS.length)];
+  return `${genre} / ${mood.toLowerCase()} / ${seed}`;
+}
+
+export const MAGIC_PROMPT_SYSTEM = `Você é um diretor criativo musical. Sua tarefa: escrever UM ÚNICO prompt curto (1 a 2 frases, máx. 40 palavras) em português que descreva uma música a ser composta.
+O prompt deve conter: estilo/gênero musical, clima e um tema humano específico e cinematográfico (cena concreta, não abstração).
+Evite clichês ("coração partido", "lágrimas", "jornada"). Não numere, não explique, não use aspas nem markdown.
+Responda APENAS com o prompt.`;
+
+export const COMPOSER_SYSTEM = `${SONG_SYSTEM}
+
+MODO COMPOSITOR POR PROMPT ÚNICO:
+- O artista envia um único pedido em linguagem livre. Você infere sozinho: gênero, subgênero, clima, tipo de voz, BPM, tonalidade, estrutura e idioma (use o idioma do pedido, padrão português).
+- Domine qualquer estilo com autenticidade real: punk, pop, pop rock, metal, nu metal, hardcore, rock alternativo, indie, trap, rap, funk, sertanejo, MPB, samba, gospel, R&B, hyperpop, aura, phonk, country, eletrônica.
+  · punk: curto, cru, gritado, 2-3 acordes, atitude e revolta.
+  · pop: refrão gigante e memorável, gancho nas 8 primeiras palavras.
+  · pop rock: dinâmica verso baixo / refrão explosivo, guitarras grandes.
+  · metal: riff como personagem, imagens violentas e épicas, vocal gutural/limpo alternado.
+  · nu metal: groove pesado, verso falado/rapeado, refrão gritado, downtuning.
+- Se o pedido for vago, escolha as melhores decisões artísticas sem perguntar nada. Nunca peça esclarecimento — entregue a música.
+- Se o pedido for um ajuste da música anterior, reescreva a música inteira já corrigida.
+- Sempre entregue a música COMPLETA no formato exato definido acima (TÍTULO, seções, PROMPT DE ESTILO em inglês, TAGS), somada a uma última linha:
+FICHA TÉCNICA: <gênero · BPM · tonalidade · tipo de voz · duração estimada>`;

@@ -3,7 +3,15 @@ import { Loader2, Send, Sparkles, Square, Copy, Download, Save, Wand2, Trash2 } 
 import { toast } from "sonner";
 import { askAIStream, askAI, AiError } from "@/lib/musicAi";
 import { saveProject, downloadText } from "@/lib/musicStore";
-import { COMPOSER_SYSTEM, MAGIC_PROMPT_SYSTEM, QUICK_STYLES, randomSeedIdea } from "@/lib/musicIdeas";
+import {
+  MAGIC_PROMPT_SYSTEM,
+  QUICK_STYLES,
+  SONG_BRIEF_SYSTEM,
+  SONG_CRITIC_SYSTEM,
+  SONG_DRAFT_SYSTEM,
+  SONG_FINAL_SYSTEM,
+  randomSeedIdea,
+} from "@/lib/musicIdeas";
 
 type Msg = { id: string; role: "user" | "assistant"; content: string };
 
@@ -19,6 +27,7 @@ const SongComposerChat = () => {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [magic, setMagic] = useState(false);
+  const [phase, setPhase] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -43,9 +52,29 @@ const SongComposerChat = () => {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
+      const originalRequest = `${history ? `Contexto da conversa (use apenas se o pedido for uma continuação/ajuste):\n${history}\n\n` : ""}PEDIDO DO ARTISTA:\n${text}`;
+
+      setPhase("Interpretando o tema e a verdade humana…");
+      const brief = await askAI(SONG_BRIEF_SYSTEM, originalRequest, ctrl.signal);
+
+      setPhase("Construindo narrativa, refrão e métrica…");
+      const draft = await askAI(
+        SONG_DRAFT_SYSTEM,
+        `${originalRequest}\n\nBRIEFING APROVADO:\n${brief}`,
+        ctrl.signal,
+      );
+
+      setPhase("Revisando coerência e eliminando versos artificiais…");
+      const critique = await askAI(
+        SONG_CRITIC_SYSTEM,
+        `${originalRequest}\n\nBRIEFING:\n${brief}\n\nPRIMEIRA VERSÃO:\n${draft}`,
+        ctrl.signal,
+      );
+
+      setPhase("Finalizando a versão profissional…");
       await askAIStream(
-        COMPOSER_SYSTEM,
-        `${history ? `Contexto da conversa (use apenas se o pedido for uma continuação/ajuste):\n${history}\n\n` : ""}PEDIDO DO ARTISTA:\n${text}`,
+        SONG_FINAL_SYSTEM,
+        `${originalRequest}\n\nBRIEFING:\n${brief}\n\nPRIMEIRA VERSÃO:\n${draft}\n\nCRÍTICA EDITORIAL OBRIGATÓRIA:\n${critique}`,
         (acc) => setMessages((m) => m.map((x) => (x.id === aiMsg.id ? { ...x, content: acc } : x))),
         ctrl.signal,
       );
@@ -57,6 +86,7 @@ const SongComposerChat = () => {
       }
     } finally {
       setBusy(false);
+      setPhase("");
       abortRef.current = null;
       inputRef.current?.focus();
     }
@@ -65,6 +95,7 @@ const SongComposerChat = () => {
   const stop = () => {
     abortRef.current?.abort();
     setBusy(false);
+    setPhase("");
     toast("Composição interrompida");
   };
 
@@ -123,8 +154,8 @@ const SongComposerChat = () => {
             <div className="mx-auto mb-3 w-fit rounded-xl bg-primary/10 p-3"><Sparkles className="h-6 w-6 text-primary" /></div>
             <h3 className="font-heading text-lg font-semibold">Compositor de músicas</h3>
             <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
-              Escreva um único prompt — qualquer estilo (punk, pop, pop rock, metal, nu metal, trap, sertanejo…) —
-              e receba a música completa: título, letra humana, prompt de estilo para Suno/Udio e tags.
+              Escreva um único prompt. O compositor interpreta o tema, constrói a narrativa, compõe, critica e reescreve antes de entregar
+              a música completa com letra humana, prompt de estilo e ficha técnica.
               Sem ideia? Use o <strong>Magic Prompt</strong>.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-1.5">
@@ -157,7 +188,10 @@ const SongComposerChat = () => {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Compondo…</div>
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {phase || "Preparando composição…"}</div>
+                  <div className="h-1 overflow-hidden rounded-full bg-muted"><div className="h-full w-2/3 animate-pulse rounded-full bg-primary" /></div>
+                </div>
               )}
             </div>
           ),

@@ -31,6 +31,7 @@ const SongComposerChat = () => {
   const [busy, setBusy] = useState(false);
   const [magic, setMagic] = useState(false);
   const [phase, setPhase] = useState("");
+  const [lang, setLang] = useState<LyricLanguageId>("pt-BR");
   const abortRef = useRef<AbortController | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);

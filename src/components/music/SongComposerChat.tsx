@@ -56,7 +56,7 @@ const SongComposerChat = () => {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const originalRequest = `${history ? `Contexto da conversa (use apenas se o pedido for uma continuação/ajuste):\n${history}\n\n` : ""}PEDIDO DO ARTISTA:\n${text}`;
+      const originalRequest = `${languageDirective(lang)}\n\n${history ? `Contexto da conversa (use apenas se o pedido for uma continuação/ajuste):\n${history}\n\n` : ""}PEDIDO DO ARTISTA:\n${text}`;
 
       setPhase("Interpretando o tema e a verdade humana…");
       const brief = await askAI(SONG_BRIEF_SYSTEM, originalRequest, ctrl.signal);

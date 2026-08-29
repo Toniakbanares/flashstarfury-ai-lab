@@ -10,6 +10,9 @@ import {
   SONG_CRITIC_SYSTEM,
   SONG_DRAFT_SYSTEM,
   SONG_FINAL_SYSTEM,
+  LYRIC_LANGUAGES,
+  languageDirective,
+  type LyricLanguageId,
   randomSeedIdea,
 } from "@/lib/musicIdeas";
 

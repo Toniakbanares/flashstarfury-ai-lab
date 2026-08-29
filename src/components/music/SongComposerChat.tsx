@@ -229,6 +229,13 @@ const SongComposerChat = () => {
             className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary hover:bg-primary/20 disabled:opacity-50">
             {magic ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} Magic Prompt
           </button>
+          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            Idioma
+            <select value={lang} onChange={(e) => setLang(e.target.value as LyricLanguageId)} disabled={busy}
+              className="rounded-full border border-border bg-card px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50">
+              {LYRIC_LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+            </select>
+          </label>
           {messages.length > 0 && (
             <button onClick={() => { setMessages([]); toast("Conversa limpa"); }}
               className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:text-foreground">

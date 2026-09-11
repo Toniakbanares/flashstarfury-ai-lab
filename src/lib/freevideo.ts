@@ -14,6 +14,8 @@ export type VideoGenOpts = {
   durationMs?: number;    // duração total (default 5000)
   fps?: number;           // default 30
   onProgress?: (pct: number, stage: string) => void;
+  /** Watermark-free frame provider; falls back to the free provider when it returns null. */
+  resolveFrame?: (prompt: string, index: number) => Promise<string | null>;
 };
 
 export type VideoGenResult = {

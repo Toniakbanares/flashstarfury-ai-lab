@@ -59,14 +59,19 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
   for (let i = 0; i < NFRAMES; i++) {
     const hint = MOTION_HINTS[i % MOTION_HINTS.length];
     const enriched = `${prompt}, ${hint}, cinematic film still, 35mm, color grading`;
+    let frameUrl: string | null = null;
+    if (opts.resolveFrame) {
+      try { frameUrl = await opts.resolveFrame(enriched, i); } catch { frameUrl = null; }
+    }
     urls.push(
-      pollinationsImage(enriched, {
-        width: W,
-        height: H,
-        seed: opts.seed + i * 17,
-        model: opts.model ?? "flux",
-        enhance: opts.enhance,
-      })
+      frameUrl ??
+        pollinationsImage(enriched, {
+          width: W,
+          height: H,
+          seed: opts.seed + i * 17,
+          model: opts.model ?? "flux",
+          enhance: opts.enhance,
+        })
     );
   }
 

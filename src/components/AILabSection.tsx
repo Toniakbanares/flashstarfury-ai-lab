@@ -272,7 +272,8 @@ const AILabSection = () => {
         if (srv.ok && srv.data?.videoUrl) {
           setProgress(100);
           // Use remote URL directly; build poster from pollinations
-          const poster = pollinationsImage(enrichedPrompt, { width: dims.w, height: dims.h, model: imgModel, seed: freshSeed });
+          const posterRes = await generateImageServer(enrichedPrompt, activeRatio.id);
+          const poster = posterRes.ok && posterRes.data?.imageUrl ? posterRes.data.imageUrl : undefined;
           setGeneratedVideo({ url: srv.data.videoUrl, poster, mime: "video/mp4" });
           setOutput(`Vídeo gerado via FAL ✨ — ${activeRatio.name}`);
           await useCredit();
@@ -284,10 +285,9 @@ const AILabSection = () => {
 
         if (typeof MediaRecorder === "undefined") {
           toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
-          const url = pollinationsImage(enrichedPrompt, {
-            width: dims.w, height: dims.h, model: imgModel,
-            enhance: creativity[0] >= 50, seed: freshSeed,
-          });
+          const still = await generateImageServer(enrichedPrompt, activeRatio.id);
+          if (!still.ok || !still.data?.imageUrl) throw new Error("Provedor de imagem indisponível");
+          const url = still.data.imageUrl;
           await preloadImage(url);
           setProgress(100);
           setGeneratedImage(url);
@@ -311,6 +311,10 @@ const AILabSection = () => {
             setProgress(pct);
             setProgressLabel(label);
           },
+          resolveFrame: async (framePrompt) => {
+            const f = await generateImageServer(framePrompt, activeRatio.id);
+            return f.ok && f.data?.imageUrl ? f.data.imageUrl : null;
+          },
         });
         setProgress(100);
         setGeneratedVideo({ url: result.url, poster: result.posterUrl, mime: result.mime });
@@ -329,15 +333,14 @@ const AILabSection = () => {
         let url: string | null = null;
         if (srv.ok && srv.data?.previewUrl) url = srv.data.previewUrl;
         if (!url) {
-          url = pollinationsImage(enrichedPrompt, {
-            width: dims.w, height: dims.h, model: "flux-3d",
-            enhance: creativity[0] >= 50, seed: freshSeed,
-          });
+          const img = await generateImageServer(
+            `${enrichedPrompt}, 3D render, cinematic studio lighting, high detail`,
+            activeRatio.id,
+          );
+          if (img.ok && img.data?.imageUrl) url = img.data.imageUrl;
         }
-        try { await preloadImage(url); } catch {
-          url = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
-          await preloadImage(url);
-        }
+        if (!url) { stop(); throw new Error("Provedor 3D indisponível"); }
+        await preloadImage(url);
         stop(); setProgress(100);
         setGeneratedImage(url);
         setOutput(`Render 3D ✨ — ${activeRatio.name}`);
@@ -349,34 +352,20 @@ const AILabSection = () => {
       }
 
       // ---- Image-like modes (Image / Avatar / Logo) ----
-      // Try server (FAL via edge function) first
+      setProgressLabel("Gerando imagem em alta qualidade...");
       let url: string | null = null;
-      const srv = await generateImageServer(enrichedPrompt);
+      let srv = await generateImageServer(enrichedPrompt, activeRatio.id);
+      if (!srv.ok || !srv.data?.imageUrl) {
+        setProgressLabel("Refinando a geração...");
+        srv = await generateImageServer(enrichedPrompt, activeRatio.id);
+      }
       if (srv.ok && srv.data?.imageUrl) {
         url = srv.data.imageUrl;
       } else {
-        url = pollinationsImage(enrichedPrompt, {
-          width: dims.w,
-          height: dims.h,
-          model: mode === "logo" ? "flux" : imgModel,
-          enhance: creativity[0] >= 50,
-          seed: freshSeed,
-        });
+        stop();
+        throw new Error(srv.error || "Provedor de imagem indisponível");
       }
-      try {
-        await preloadImage(url);
-      } catch (e) {
-        const fallbackUrl = `https://picsum.photos/seed/${freshSeed}/${dims.w}/${dims.h}`;
-        await preloadImage(fallbackUrl);
-        toast({ title: "Modo offline", description: "Usando placeholder — provedor de imagem indisponível." });
-        stop(); setProgress(100);
-        setGeneratedImage(fallbackUrl);
-        setOutput(`Placeholder gerado ✨ — ${activeRatio.name}`);
-        await useCredit();
-        const id = await saveGeneration(input, fallbackUrl, null);
-        if (id) setLastGenId(id);
-        return;
-      }
+      await preloadImage(url);
       stop(); setProgress(100);
       setGeneratedImage(url);
 

@@ -19,8 +19,8 @@ async function call<T = any>(fn: string, body: any): Promise<{ ok: boolean; data
   }
 }
 
-export const generateImageServer = (prompt: string) =>
-  call<{ imageUrl: string; text?: string }>("generate-image", { prompt });
+export const generateImageServer = (prompt: string, aspect = "1:1") =>
+  call<{ imageUrl: string; text?: string }>("generate-image", { prompt, aspect });
 
 export const generateVideoServer = (prompt: string) =>
   call<{ videoUrl: string }>("generate-video", { prompt });

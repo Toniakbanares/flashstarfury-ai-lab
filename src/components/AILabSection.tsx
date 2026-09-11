@@ -311,6 +311,10 @@ const AILabSection = () => {
             setProgress(pct);
             setProgressLabel(label);
           },
+          resolveFrame: async (framePrompt) => {
+            const f = await generateImageServer(framePrompt, activeRatio.id);
+            return f.ok && f.data?.imageUrl ? f.data.imageUrl : null;
+          },
         });
         setProgress(100);
         setGeneratedVideo({ url: result.url, poster: result.posterUrl, mime: result.mime });

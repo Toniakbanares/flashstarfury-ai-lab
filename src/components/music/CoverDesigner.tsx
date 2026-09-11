@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, Download, Sparkles } from "lucide-react";
 import { generateCover } from "@/lib/musicAi";
-import { pollinationsImage, preloadImage } from "@/lib/freeai";
+import { preloadImage } from "@/lib/freeai";
 
 import { downloadBlob, saveProject } from "@/lib/musicStore";
 import { toast } from "sonner";

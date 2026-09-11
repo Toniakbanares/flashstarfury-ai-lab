@@ -159,7 +159,7 @@ const SongComposerChat = () => {
             <h3 className="font-heading text-lg font-semibold">Compositor de músicas</h3>
             <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
               Escreva um único prompt. O compositor interpreta o tema, constrói a narrativa, compõe, critica e reescreve antes de entregar
-              a música completa com letra humana, prompt de estilo e ficha técnica.
+              a letra completa e pronta para gravar — só título e letra, sem enfeite técnico.
               Sem ideia? Use o <strong>Magic Prompt</strong>.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-1.5">

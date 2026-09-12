@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { copyToClipboard } from "@/lib/share";
 import { addLocalCreation } from "@/lib/localStore";
 import PixSupportModal from "@/components/PixSupportModal";
+import { boostPrompt, knowledgeBriefing, shotPrompt, loreKnowledge } from "@/lib/knowledge";
 
 type Mode = "image" | "video" | "3d" | "avatar" | "logo" | "text";
 

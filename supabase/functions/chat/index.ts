@@ -53,7 +53,33 @@ serve(async (req) => {
 
     const chosenModel = ALLOWED_MODELS.has(model) ? model : DEFAULT_MODEL;
 
-    // 1) Primary: OpenRouter
+    let lastStatus = 0;
+    let lastError = "";
+
+    // 1) Primary: Lovable AI Gateway (always available, no external credits)
+    const tryLovable = async () => {
+      if (!LOVABLE_API_KEY) return null;
+      try {
+        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: GATEWAY_MODEL[chosenModel] ?? "google/gemini-3.8-flash",
+            messages: [{ role: "system", content: systemPrompt }, ...messages],
+            stream: true,
+          }),
+        });
+        if (r.ok && r.body) return r;
+        lastStatus = r.status;
+        lastError = await r.text().catch(() => "");
+        console.error("Lovable error:", r.status, lastError);
+      } catch (e) {
+        console.error("Lovable exception:", e);
+      }
+      return null;
+    };
+
+    // 2) Fallback: OpenRouter (only if the account still has credits)
     const tryOpenRouter = async () => {
       if (!OPENROUTER_API_KEY) return null;
       try {
@@ -73,35 +99,16 @@ serve(async (req) => {
           }),
         });
         if (r.ok && r.body) return r;
-        console.error("OpenRouter error:", r.status, await r.text().catch(() => ""));
+        lastStatus = r.status;
+        lastError = await r.text().catch(() => "");
+        console.error("OpenRouter error:", r.status, lastError);
       } catch (e) {
         console.error("OpenRouter exception:", e);
       }
       return null;
     };
 
-    // 2) Fallback: Lovable AI Gateway
-    const tryLovable = async () => {
-      if (!LOVABLE_API_KEY) return null;
-      try {
-        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [{ role: "system", content: systemPrompt }, ...messages],
-            stream: true,
-          }),
-        });
-        if (r.ok && r.body) return r;
-        console.error("Lovable error:", r.status);
-      } catch (e) {
-        console.error("Lovable exception:", e);
-      }
-      return null;
-    };
-
-    for (const p of [tryOpenRouter, tryLovable]) {
+    for (const p of [tryLovable, tryOpenRouter]) {
       const resp = await p();
       if (resp) {
         return new Response(resp.body, {
@@ -110,10 +117,18 @@ serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ error: "All AI providers are temporarily unavailable. Please try again shortly." }),
-      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    const friendly =
+      lastStatus === 402
+        ? "Sem créditos de IA disponíveis no momento. Adicione créditos para continuar usando o chat."
+        : lastStatus === 429
+          ? "Muitas solicitações agora. Aguarde alguns segundos e tente novamente."
+          : "Os serviços de IA estão temporariamente indisponíveis. Tente novamente em instantes.";
+
+    return new Response(JSON.stringify({ error: friendly, detail: lastError.slice(0, 300) }), {
+      status: lastStatus === 402 || lastStatus === 429 ? lastStatus : 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   } catch (e) {
     console.error("chat error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {

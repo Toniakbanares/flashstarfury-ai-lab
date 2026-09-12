@@ -3,6 +3,7 @@
 // Sem API paga, sem chave. Resultado: Blob de vídeo baixável.
 
 import { pollinationsImage, preloadImage } from "@/lib/freeai";
+import { shotPrompt } from "@/lib/knowledge";
 
 export type VideoGenOpts = {
   width: number;

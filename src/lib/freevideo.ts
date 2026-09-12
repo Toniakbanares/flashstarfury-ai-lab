@@ -26,14 +26,6 @@ export type VideoGenResult = {
   mime: string;
 };
 
-const MOTION_HINTS = [
-  "wide establishing shot",
-  "slow camera push in",
-  "medium shot, slight pan right",
-  "close up detail, shallow depth of field",
-  "dramatic angle, cinematic lighting",
-  "atmospheric haze, lens flare",
-];
 
 function pickMime(): string {
   const candidates = [

@@ -270,7 +270,27 @@ Não imite letra, refrão, bordão, melodia ou assinatura de artistas específic
 
 CONTROLE DE QUALIDADE (auditoria interna silenciosa, 1–10)
 Originalidade das imagens · força do refrão · naturalidade · cantabilidade · coerência narrativa · profundidade emocional · consistência da voz · ausência de clichês · adequação ao gênero · memorabilidade.
-Qualquer critério abaixo de 8 → reescreva antes de entregar.`;
+Qualquer critério abaixo de 8 → reescreva antes de entregar.
+
+BIBLIOTECA DE CONHECIMENTO DE LETRA POR GÊNERO (aplique em silêncio, nunca cite)
+- Punk / hardcore: versos curtos e diretos, frases de 4 a 7 sílabas, linguagem de protesto pessoal, refrão gritável em 5 palavras, humor ácido, sem metáfora rebuscada.
+- Pop: gancho nos 8 primeiros segundos, título repetido no refrão, linguagem de conversa, rima simples e alta cantabilidade, detalhe concreto no verso e universalidade no refrão.
+- Pop rock / rock: verso baixo e narrativo, pré-refrão que sobe, refrão com vogais abertas (a, o, e) para sustentar nota longa.
+- Metal / nu metal: imagens físicas e violentas em sentido figurado, verbos de impacto, sílabas martelando o tempo forte, ponte com virada de perspectiva.
+- Trap / rap: cadência antes da rima, rimas internas e multissilábicas, detalhes de marca, rua, dinheiro e tempo, alternância entre flow rápido e frase suspensa.
+- Sertanejo: história linear com personagem, lugar e hora; conversa telefônica, bar, estrada, foto; dor honesta sem autopiedade; refrão com virada de frase.
+- MPB / samba / bossa: prosódia refinada, imagem poética concreta, síncope na fala, ironia leve.
+- Gospel / worship: fé encarnada em cena real, testemunho específico, refrão comunitário cantável em uníssono, sem jargão religioso vazio.
+- R&B / neo soul: intimidade, corpo, silêncio entre frases, melisma implícito em vogais longas.
+- Aura / hyperpop / etéreo: poucas palavras, repetição hipnótica, imagem única esticada, sensação acima de narrativa.
+- Funk / afro house / amapiano: comando corporal, chamada e resposta, frases curtas para encaixe rítmico.
+- Country / folk: narrativa de estrada e família, detalhe de objeto, moral implícita nunca dita.
+
+PROSÓDIA E MÉTRICA
+Conte sílabas cantadas por linha e mantenha regularidade dentro de cada seção (variação proposital só na ponte). Coloque a sílaba tônica no tempo forte. Vogais abertas em notas longas. Evite encontro consonantal difícil de cantar. Deixe respiração a cada 2 linhas em andamento lento e a cada 4 em rápido.
+
+ARQUITETURA DE SEÇÕES
+Verso = fatos e cena · Pré-refrão = tensão e pergunta · Refrão = tese emocional + gancho · Verso 2 = consequência ou nova informação · Ponte = revelação, decisão ou inversão · Refrão final = mesma letra com uma palavra mudada que prova a transformação.
 
 export const SONG_BRIEF_SYSTEM = `${MUSIC_WRITER_PRO}
 

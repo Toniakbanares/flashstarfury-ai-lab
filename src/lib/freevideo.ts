@@ -3,6 +3,7 @@
 // Sem API paga, sem chave. Resultado: Blob de vídeo baixável.
 
 import { pollinationsImage, preloadImage } from "@/lib/freeai";
+import { shotPrompt } from "@/lib/knowledge";
 
 export type VideoGenOpts = {
   width: number;
@@ -25,14 +26,6 @@ export type VideoGenResult = {
   mime: string;
 };
 
-const MOTION_HINTS = [
-  "wide establishing shot",
-  "slow camera push in",
-  "medium shot, slight pan right",
-  "close up detail, shallow depth of field",
-  "dramatic angle, cinematic lighting",
-  "atmospheric haze, lens flare",
-];
 
 function pickMime(): string {
   const candidates = [
@@ -59,8 +52,7 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
   onProgress(2, "Preparando cenas...");
   const urls: string[] = [];
   for (let i = 0; i < NFRAMES; i++) {
-    const hint = MOTION_HINTS[i % MOTION_HINTS.length];
-    const enriched = `${prompt}, ${hint}, cinematic film still, 35mm, color grading`;
+    const enriched = shotPrompt(prompt, i, NFRAMES);
     let frameUrl: string | null = null;
     if (opts.resolveFrame) {
       try { frameUrl = await opts.resolveFrame(enriched, i); } catch { frameUrl = null; }

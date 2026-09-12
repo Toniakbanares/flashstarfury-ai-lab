@@ -44,11 +44,11 @@ const TOOL_TYPE: Record<Mode, string> = {
 };
 
 const PROMPT_BOOSTERS: Record<Mode, (p: string) => string> = {
-  image:  p => p,
-  video:  p => `cinematic film still, motion blur, dynamic composition, ${p}`,
-  "3d":   p => `3D render, isometric, octane render, studio lighting, ${p}`,
-  avatar: p => `professional portrait, sharp focus, centered, ${p}`,
-  logo:   p => `${p}, vector logo, flat design, on solid white background, minimal, iconic`,
+  image:  p => boostPrompt("image", p),
+  video:  p => boostPrompt("video", p),
+  "3d":   p => boostPrompt("3d", p),
+  avatar: p => boostPrompt("avatar", p),
+  logo:   p => boostPrompt("logo", p),
   text:   p => p,
 };
 

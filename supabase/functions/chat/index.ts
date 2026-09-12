@@ -95,6 +95,9 @@ serve(async (req) => {
             model: chosenModel,
             messages: [{ role: "system", content: systemPrompt }, ...messages],
             stream: true,
+            // Keep the reservation small so it fits limited OpenRouter balances
+            // (OpenRouter reserves the model's full context otherwise → 402).
+            max_tokens: 2048,
             temperature: mode === "code" ? 0.3 : 0.7,
           }),
         });

@@ -20,6 +20,18 @@ const ALLOWED_MODELS = new Set<string>([
 
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
 
+// Models supported by the Lovable AI Gateway (used as the reliable fallback).
+const GATEWAY_MODEL: Record<string, string> = {
+  "anthropic/claude-3.5-sonnet": "openai/gpt-5.4",
+  "openai/gpt-4o": "openai/gpt-5.4",
+  "openai/gpt-4o-mini": "openai/gpt-5.4-mini",
+  "google/gemini-2.5-flash": "google/gemini-3.8-flash",
+  "google/gemini-2.5-pro": "google/gemini-3.1-pro-preview",
+  "deepseek/deepseek-chat": "google/gemini-3.8-flash",
+  "mistralai/mistral-large": "google/gemini-3.8-flash",
+};
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 

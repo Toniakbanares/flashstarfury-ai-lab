@@ -179,7 +179,11 @@ const AILabSection = () => {
     try {
       await new Promise<void>((resolve) => {
         streamChat({
-          messages: [{ role: "user", content: `${PROMPT_OPTIMIZER[mode]}\n\nUser idea: ${base}` }],
+          messages: [{
+            role: "user",
+            content:
+              `${PROMPT_OPTIMIZER[mode]}${mode === "text" ? (loreKnowledge(base) ? `\n\nConhecimento aplicável:\n${loreKnowledge(base)}` : "") : knowledgeBriefing(base)}\n\nUser idea: ${base}`,
+          }],
           mode: "creative",
           onDelta: (c) => { out += c; },
           onDone: () => resolve(),

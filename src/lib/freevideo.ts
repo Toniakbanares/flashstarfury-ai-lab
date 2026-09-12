@@ -59,8 +59,7 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
   onProgress(2, "Preparando cenas...");
   const urls: string[] = [];
   for (let i = 0; i < NFRAMES; i++) {
-    const hint = MOTION_HINTS[i % MOTION_HINTS.length];
-    const enriched = `${prompt}, ${hint}, cinematic film still, 35mm, color grading`;
+    const enriched = shotPrompt(prompt, i, NFRAMES);
     let frameUrl: string | null = null;
     if (opts.resolveFrame) {
       try { frameUrl = await opts.resolveFrame(enriched, i); } catch { frameUrl = null; }

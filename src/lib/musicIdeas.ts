@@ -290,7 +290,8 @@ PROSÓDIA E MÉTRICA
 Conte sílabas cantadas por linha e mantenha regularidade dentro de cada seção (variação proposital só na ponte). Coloque a sílaba tônica no tempo forte. Vogais abertas em notas longas. Evite encontro consonantal difícil de cantar. Deixe respiração a cada 2 linhas em andamento lento e a cada 4 em rápido.
 
 ARQUITETURA DE SEÇÕES
-Verso = fatos e cena · Pré-refrão = tensão e pergunta · Refrão = tese emocional + gancho · Verso 2 = consequência ou nova informação · Ponte = revelação, decisão ou inversão · Refrão final = mesma letra com uma palavra mudada que prova a transformação.
+Verso = fatos e cena · Pré-refrão = tensão e pergunta · Refrão = tese emocional + gancho · Verso 2 = consequência ou nova informação · Ponte = revelação, decisão ou inversão · Refrão final = mesma letra com uma palavra mudada que prova a transformação.`;
+
 
 export const SONG_BRIEF_SYSTEM = `${MUSIC_WRITER_PRO}
 

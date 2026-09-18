@@ -1,82 +1,42 @@
+# Tratamento completo dos geradores de IA
 
-# PixelNova AI — Creative Platform Upgrade
+## Objetivo
+Elevar a qualidade de imagem, vídeo, 3D, avatar, logo, texto e música, eliminando qualquer imagem com marca Pollinations e preservando o visual, o mascote, os temas e as ferramentas atuais.
 
-You selected all four priority blocks, OpenRouter as the text provider, and hybrid storage (local by default, sync to Cloud when logged in). That's ~15 new pages/modules plus a full audit. To keep quality high I'll ship it in 4 focused phases. Each phase leaves the app fully working; you review, then I move to the next.
+## Implementação
 
-**Non-negotiables preserved every phase:** PixelNova AI name, Lumy mascot, starry background, Dark/Light/Nature themes, existing navigation and routes.
+1. **Imagem, avatar, logo e capas sem marca**
+   - Remover Pollinations de todos os caminhos visuais, inclusive reservas e quadros de vídeo.
+   - Atualizar a geração principal para o modelo padrão atual de imagens da Lovable, com formato correto, qualidade máxima suportada, proporção real e instruções específicas por ferramenta.
+   - Manter FAL apenas como provedor secundário já existente, sem adicionar nova API paga.
+   - Validar a imagem recebida antes de exibi-la; em falha, mostrar a mensagem real e segura em vez de entregar uma imagem inferior ou marcada.
 
----
+2. **Vídeo com mais qualidade e continuidade**
+   - Melhorar os prompts de cena com identidade fixa do personagem, ambiente, iluminação, câmera e movimento consistentes.
+   - Usar o vídeo nativo já configurado quando disponível.
+   - Melhorar o vídeo local de reserva com quadros sem marca, enquadramento correto, transições mais suaves e preservação da proporção.
+   - Não transformar uma imagem estática marcada em “vídeo”; se não houver quadros válidos, encerrar com erro claro.
 
-## Phase 1 — Foundation (this turn)
+3. **3D e demais ferramentas visuais**
+   - Melhorar o prompt intermediário do 3D para fundo limpo, objeto inteiro, materiais legíveis e geometria consistente.
+   - Remover reservas Pollinations do 3D e do criador de capas.
+   - Garantir que cada nova geração substitua corretamente a anterior e libere arquivos temporários do navegador.
 
-Goal: everything downstream depends on these pieces.
+4. **Texto, chat, letras e música**
+   - Padronizar respostas vazias, cancelamento, erros de conexão, créditos, limite e indisponibilidade.
+   - Corrigir a política de tentativas: repetir somente erros temporários (`429`/`5xx`) com espera curta e limitada; não repetir `400`, `401`, `402` ou `403`.
+   - Preservar a base de conhecimento musical e os formatos de letras já definidos, sem inserir conteúdo falso quando a IA estiver indisponível.
 
-1. **OpenRouter as primary text provider**
-   - Update `supabase/functions/chat` to call OpenRouter with `OPENROUTER_API_KEY` (already set as a secret).
-   - Model catalog: Claude 3.5 Sonnet, GPT-4o, Gemini 2.0 Flash, DeepSeek V3, Mistral Large, Llama 3.3 70B.
-   - Fallback chain: OpenRouter → Lovable AI Gateway → readable error toast. Never crashes.
-2. **Hybrid storage layer** — new `src/lib/hybridStore.ts`
-   - Unified API `hybrid.get/set/list/remove(namespace, key)`.
-   - Guest → localStorage. Logged in → Supabase table `user_data (user_id, namespace, key, value jsonb)` with RLS + GRANTs.
-   - Auto-migrates local data to Cloud on first sign-in.
-3. **Global audit pass**
-   - Add `ErrorBoundary` wrapping `<Outlet />`.
-   - Add `aria-label` to every icon-only button across Navbar, ChatSection, AILabSection, Explore, music tabs.
-   - `h-screen` → `h-dvh` on full-height layouts.
-   - Remove dead code: unused `Index.tsx`, duplicate `Navbar.tsx` (keeping `AppNavbar`), `demoCreations` (empty state instead of fake content, matching your "no fake content" rule for Explore).
-   - Toast on every API failure with actionable message.
+5. **Confiabilidade geral**
+   - Centralizar mensagens de erro dos geradores e impedir novas tentativas automáticas quando a conta estiver sem créditos.
+   - Manter os controles, downloads, histórico e salvamento existentes.
+   - Implantar as funções alteradas e testar os principais fluxos no navegador em tela pequena e desktop.
 
-## Phase 2 — Creative Studio upgrade
+## Limite externo importante
+Os registros atuais mostram que a conta da IA está retornando **402 — créditos insuficientes**. O código deixará de produzir imagens com marca e ficará pronto para alta qualidade, mas geração por IA não pode ser simultaneamente ilimitada, gratuita e sem provedor financiado. Enquanto não houver créditos, a ferramenta mostrará o bloqueio corretamente; ela não substituirá o resultado por Pollinations.
 
-Extends existing `AILabSection` (no visual redesign):
-- Add fields: **Negative Prompt**, **Style** (dropdown from Style Library), **Progress bar** with percentage.
-- Per-generation actions: **Favorite**, **Remix**, **Share** (copy link + native share), **Download** (already exists, hardened).
-- **History drawer** — last 50 generations per module, filterable, restorable.
-- New modules exposed as tabs: **Background Removal** and **Upscale** (FAL `birefnv2` and `clarity-upscaler`). Both fall back gracefully if `FAL_API_KEY` fails.
-
-## Phase 3 — Prompt Lab + Prompt Chains
-
-New route `/prompts`:
-- **Builder** (variables via `{{var}}`), **Optimizer**, **Improver**, **Translator**, **Analyzer** (token count, clarity score via LLM).
-- **Library** with categories, tags, favorites, version history — hybrid storage.
-- **Import/Export** MD / JSON / TXT.
-- **Chains** editor: DAG of steps (Idea → Research → Story → Storyboard → Image → Video → Thumbnail → SEO). Each step selects a module + prompt template; output of previous steps is injected as variables. Save as reusable workflow, run with live per-step progress.
-
-## Phase 4 — Storyboard + Characters + Styles + Project Workspace
-
-New routes:
-- `/storyboard` — panel grid + timeline view. Each panel: title, description, characters, dialogue, camera, lens, lighting, emotion, image/video/negative prompt, notes. Actions: duplicate, move, delete, remix, generate image, generate video. PDF export via `jspdf`.
-- `/characters` — reusable character sheets (appearance, age, personality, voice, style, clothes, accessories, refs).
-- `/styles` — built-in styles (Realistic, Comic, Anime, Watercolor, Low-Poly, Oil, Fantasy, Sci-Fi, Pixel Art, Minimal, Cinematic, Studio) + user customs.
-- `/projects` — workspace tying together images, videos, music, storyboards, prompts, chains, characters, styles, notes; searchable.
-
-Later polish pass (after Phase 4 lands): Export Center, Account/Settings surface, Productivity (tasks/notes/inbox), performance audit (React.lazy on all heavy routes, image `loading="lazy"`, memoization).
-
----
-
-## Technical notes
-
-- **Storage schema (Phase 1):**
-  ```sql
-  CREATE TABLE public.user_data (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    namespace text NOT NULL,
-    key text NOT NULL,
-    value jsonb NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE(user_id, namespace, key)
-  );
-  GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_data TO authenticated;
-  GRANT ALL ON public.user_data TO service_role;
-  ALTER TABLE public.user_data ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY "own data" ON public.user_data
-    FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-  ```
-- OpenRouter models kept to the ones the current `ChatSection` already exposes (Claude/GPT/Gemini/DeepSeek/Mistral) so the UI selector doesn't change.
-- All new pages reuse existing tokens (`bg-card`, `text-foreground`, `border-border`, `text-primary`) — no new colors, no font changes.
-- No `.env` edits, no `client.ts` edits, no `supabase/config.toml` edits.
-
-## Confirm to start Phase 1
-
-Reply "go" and I'll ship Phase 1 in the next turn. If you'd rather I start with a different phase (e.g. jump straight to Storyboard), say which.
+## Resultado esperado
+- Nenhuma imagem exibida ou usada em vídeos conterá a marca Pollinations.
+- Imagens e prompts terão qualidade superior quando o provedor estiver disponível.
+- Vídeos terão melhor continuidade e composição.
+- Todas as ferramentas terão falhas previsíveis, mensagens claras e nenhum resultado falso.

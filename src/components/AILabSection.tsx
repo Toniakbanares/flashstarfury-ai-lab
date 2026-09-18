@@ -291,8 +291,9 @@ const AILabSection = () => {
         if (typeof MediaRecorder === "undefined") {
           toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
           const still = await generateImageServer(enrichedPrompt, activeRatio.id);
-          if (!still.ok || !still.data?.imageUrl) throw new Error("Provedor de imagem indisponível");
-          const url = still.data.imageUrl;
+          const url = still.ok && still.data?.imageUrl
+            ? still.data.imageUrl
+            : pollinationsImage(enrichedPrompt, { width: dims.w, height: dims.h, seed: freshSeed, model: imgModel });
           await preloadImage(url);
           setProgress(100);
           setGeneratedImage(url);
@@ -344,7 +345,11 @@ const AILabSection = () => {
           );
           if (img.ok && img.data?.imageUrl) url = img.data.imageUrl;
         }
-        if (!url) { stop(); throw new Error("Provedor 3D indisponível"); }
+        if (!url) {
+          url = pollinationsImage(`${enrichedPrompt}, 3D render, cinematic studio lighting, high detail`, {
+            width: dims.w, height: dims.h, seed: freshSeed, model: imgModel,
+          });
+        }
         await preloadImage(url);
         stop(); setProgress(100);
         setGeneratedImage(url);
@@ -367,8 +372,11 @@ const AILabSection = () => {
       if (srv.ok && srv.data?.imageUrl) {
         url = srv.data.imageUrl;
       } else {
-        stop();
-        throw new Error(srv.error || "Provedor de imagem indisponível");
+        setProgressLabel("Usando gerador alternativo gratuito...");
+        url = pollinationsImage(enrichedPrompt, {
+          width: dims.w, height: dims.h, seed: freshSeed,
+          model: imgModel, enhance: creativity[0] >= 50,
+        });
       }
       await preloadImage(url);
       stop(); setProgress(100);

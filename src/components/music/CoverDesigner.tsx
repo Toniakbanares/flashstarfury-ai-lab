@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Loader2, Download, Sparkles } from "lucide-react";
 import { generateCover } from "@/lib/musicAi";
-import { preloadImage } from "@/lib/freeai";
+import { preloadImage, pollinationsImage } from "@/lib/freeai";
 
 import { downloadBlob, saveProject } from "@/lib/musicStore";
 import { toast } from "sonner";
@@ -20,14 +20,20 @@ const CoverDesigner = () => {
       if (res?.imageUrl) setUrl(res.imageUrl);
       else throw new Error(res?.error || "Nenhuma imagem retornada");
     } catch (e) {
-      // Retry once on the same watermark-free provider before giving up.
+      // Retry once, then fall back to the free generator so it never blocks.
       try {
         const res = await generateCover(full);
         if (!res?.imageUrl) throw new Error(res?.error || "Nenhuma imagem retornada");
         await preloadImage(res.imageUrl);
         setUrl(res.imageUrl);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Falha ao gerar a capa");
+      } catch {
+        try {
+          const fallback = pollinationsImage(full, { width: 1024, height: 1024 });
+          await preloadImage(fallback);
+          setUrl(fallback);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Falha ao gerar a capa");
+        }
       }
     }
     setBusy(false);

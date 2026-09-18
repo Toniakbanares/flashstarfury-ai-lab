@@ -367,8 +367,11 @@ const AILabSection = () => {
       if (srv.ok && srv.data?.imageUrl) {
         url = srv.data.imageUrl;
       } else {
-        stop();
-        throw new Error(srv.error || "Provedor de imagem indisponível");
+        setProgressLabel("Usando gerador alternativo gratuito...");
+        url = pollinationsImage(enrichedPrompt, {
+          width: dims.w, height: dims.h, seed: freshSeed,
+          model: imgModel, enhance: creativity[0] >= 50,
+        });
       }
       await preloadImage(url);
       stop(); setProgress(100);

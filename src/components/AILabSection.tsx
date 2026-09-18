@@ -291,8 +291,9 @@ const AILabSection = () => {
         if (typeof MediaRecorder === "undefined") {
           toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
           const still = await generateImageServer(enrichedPrompt, activeRatio.id);
-          if (!still.ok || !still.data?.imageUrl) throw new Error("Provedor de imagem indisponível");
-          const url = still.data.imageUrl;
+          const url = still.ok && still.data?.imageUrl
+            ? still.data.imageUrl
+            : pollinationsImage(enrichedPrompt, { width: dims.w, height: dims.h, seed: freshSeed, model: imgModel });
           await preloadImage(url);
           setProgress(100);
           setGeneratedImage(url);

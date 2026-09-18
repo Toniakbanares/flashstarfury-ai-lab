@@ -344,7 +344,11 @@ const AILabSection = () => {
           );
           if (img.ok && img.data?.imageUrl) url = img.data.imageUrl;
         }
-        if (!url) { stop(); throw new Error("Provedor 3D indisponível"); }
+        if (!url) {
+          url = pollinationsImage(`${enrichedPrompt}, 3D render, cinematic studio lighting, high detail`, {
+            width: dims.w, height: dims.h, seed: freshSeed, model: imgModel,
+          });
+        }
         await preloadImage(url);
         stop(); setProgress(100);
         setGeneratedImage(url);

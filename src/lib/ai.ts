@@ -100,9 +100,13 @@ export async function generateImage(prompt: string): Promise<{ imageUrl?: string
         "Content-Type": "application/json",
         Authorization: `Bearer ${SUPABASE_KEY}`,
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, aspect: "1:1", quality: 100, mode: "cover" }),
     });
-    return await resp.json();
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || data?.fallback) {
+      return { error: data?.error || `Falha na geração (${resp.status})` };
+    }
+    return data;
   } catch {
     return { error: "Erro de conexão" };
   }

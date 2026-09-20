@@ -1,8 +1,6 @@
-// Free video generation: gera N keyframes via Pollinations e compõe um .webm real
-// usando Canvas + MediaRecorder com crossfade + leve zoom (efeito Ken Burns).
-// Sem API paga, sem chave. Resultado: Blob de vídeo baixável.
+// Local video composer: uses only watermark-free frames supplied by the server.
+// Canvas + MediaRecorder adds smooth crossfades and controlled camera movement.
 
-import { pollinationsImage, preloadImage } from "@/lib/freeai";
 import { shotPrompt } from "@/lib/knowledge";
 
 export type VideoGenOpts = {
@@ -15,8 +13,8 @@ export type VideoGenOpts = {
   durationMs?: number;    // duração total (default 5000)
   fps?: number;           // default 30
   onProgress?: (pct: number, stage: string) => void;
-  /** Watermark-free frame provider; falls back to the free provider when it returns null. */
-  resolveFrame?: (prompt: string, index: number) => Promise<string | null>;
+  /** Required watermark-free frame provider. */
+  resolveFrame: (prompt: string, index: number) => Promise<string | null>;
 };
 
 export type VideoGenResult = {
@@ -53,20 +51,9 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
   const urls: string[] = [];
   for (let i = 0; i < NFRAMES; i++) {
     const enriched = shotPrompt(prompt, i, NFRAMES);
-    let frameUrl: string | null = null;
-    if (opts.resolveFrame) {
-      try { frameUrl = await opts.resolveFrame(enriched, i); } catch { frameUrl = null; }
-    }
-    urls.push(
-      frameUrl ??
-        pollinationsImage(enriched, {
-          width: W,
-          height: H,
-          seed: opts.seed + i * 17,
-          model: opts.model ?? "flux",
-          enhance: opts.enhance,
-        })
-    );
+    const frameUrl = await opts.resolveFrame(enriched, i);
+    if (!frameUrl) throw new Error(`Não foi possível gerar o quadro ${i + 1} sem marca d'água.`);
+    urls.push(frameUrl);
   }
 
   // 2. Preload paralelo com progresso
@@ -90,14 +77,12 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
     )
   );
 
-  // Garante que primeira imagem está pronta para poster
-  await preloadImage(urls[0]).catch(() => {});
-
   // 3. Canvas + MediaRecorder
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
-  const ctx = canvas.getContext("2d", { alpha: false })!;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) throw new Error("Seu navegador não conseguiu preparar o vídeo.");
   // fundo inicial
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
@@ -105,7 +90,9 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
   // @ts-ignore
   const stream: MediaStream = canvas.captureStream(FPS);
   const mime = pickMime();
-  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 });
+  const pixels = W * H;
+  const bitrate = Math.max(5_000_000, Math.min(12_000_000, Math.round(pixels * FPS * 0.28)));
+  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate });
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) chunks.push(e.data);
@@ -122,11 +109,17 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
   const xfadeFrames = Math.max(4, Math.floor(segFrames * 0.35));
 
   const drawKenBurns = (img: HTMLImageElement, t: number, alpha: number) => {
-    // t in [0,1] dentro do segmento; zoom suave de 1.0 -> 1.08
-    const zoom = 1.0 + 0.08 * t;
-    const sw = img.width / zoom;
-    const sh = img.height / zoom;
-    const sx = (img.width - sw) / 2 + (img.width * 0.02 * Math.sin(t * Math.PI));
+    // Cover-crop without stretching, followed by a subtle cinematic push.
+    const sourceRatio = img.width / img.height;
+    const targetRatio = W / H;
+    let baseW = img.width;
+    let baseH = img.height;
+    if (sourceRatio > targetRatio) baseW = img.height * targetRatio;
+    else baseH = img.width / targetRatio;
+    const zoom = 1 + 0.045 * t;
+    const sw = baseW / zoom;
+    const sh = baseH / zoom;
+    const sx = (img.width - sw) / 2 + (baseW * 0.012 * Math.sin(t * Math.PI));
     const sy = (img.height - sh) / 2;
     ctx.globalAlpha = alpha;
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
@@ -172,6 +165,7 @@ export async function generateVideo(prompt: string, opts: VideoGenOpts): Promise
 
   onProgress(98, "Finalizando...");
   const blob = new Blob(chunks, { type: mime });
+  if (blob.size < 10_000) throw new Error("O navegador não conseguiu finalizar o arquivo de vídeo.");
   const url = URL.createObjectURL(blob);
 
   return { blob, url, posterUrl: urls[0], mime };

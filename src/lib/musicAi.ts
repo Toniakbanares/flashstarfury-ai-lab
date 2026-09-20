@@ -1,5 +1,4 @@
 import { streamChat, generateImage } from "@/lib/ai";
-import { pollinationsText } from "@/lib/freeai";
 
 export class AiError extends Error {}
 
@@ -10,6 +9,10 @@ function friendly(raw: string): string {
   if (m.includes("failed to fetch") || m.includes("network") || m.includes("conexão")) return "Falha de conexão. Verifique sua internet e tente novamente.";
   if (m.includes("503") || m.includes("unavailable")) return "Os provedores de IA estão indisponíveis no momento. Tente em instantes.";
   return raw || "Não foi possível gerar agora. Tente novamente.";
+}
+
+function isRetryable(raw: string): boolean {
+  return /429|rate|500|502|503|504|temporar|unavailable|network|conexão|failed to fetch/i.test(raw);
 }
 
 function once(system: string, userPrompt: string, signal?: AbortSignal): Promise<string> {
@@ -42,17 +45,11 @@ export async function askAI(
     } catch (e) {
       if (signal?.aborted) throw new AiError("Geração cancelada.");
       lastErr = e instanceof Error ? e.message : String(e);
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
+      if (!isRetryable(lastErr)) break;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 900));
     }
   }
-  // Free fallback provider
-  try {
-    onChunkless?.("Usando provedor alternativo…");
-    const out = await pollinationsText(userPrompt, system);
-    if (out.trim()) return out.trim();
-  } catch (e) {
-    lastErr = e instanceof Error ? e.message : lastErr;
-  }
+  onChunkless?.("A geração não pôde ser concluída.");
   throw new AiError(friendly(lastErr));
 }
 

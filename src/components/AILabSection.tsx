@@ -7,7 +7,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import mascotImg from "@/assets/mascot.png";
 import { streamChat } from "@/lib/ai";
-import { pollinationsImage, pollinationsText, preloadImage, POLLINATIONS_MODELS, ASPECT_RATIOS } from "@/lib/freeai";
+import { preloadImage, ASPECT_RATIOS } from "@/lib/freeai";
 import { generateVideo } from "@/lib/freevideo";
 import { generateImageServer, generateVideoServer, generate3DServer } from "@/lib/serverGen";
 import { useToast } from "@/hooks/use-toast";
@@ -55,13 +55,6 @@ const PROMPT_BOOSTERS: Record<Mode, (p: string) => string> = {
 
 // Quick suggestions removed for a cleaner UX. Use the placeholder for guidance.
 
-// Mock fallbacks when APIs fail
-function mockText(prompt: string): string {
-  const intro = `# About: ${prompt}\n\n`;
-  const body = `Here's a generated draft based on your prompt. While the AI service was unavailable, this placeholder gives you a structure to start from:\n\n- **Hook:** Capture attention in the first sentence about "${prompt}".\n- **Insight:** Share one specific, useful idea.\n- **Action:** End with a clear next step the reader can take today.\n\n_Try again in a moment for a fully AI-written response._`;
-  return intro + body;
-}
-
 const AILabSection = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -108,7 +101,7 @@ const AILabSection = () => {
     if (p) setInput(p);
   }, []);
 
-  const activeMode = useMemo(() => MODES.find(m => m.id === mode)!, [mode]);
+  const activeMode = useMemo(() => MODES.find(m => m.id === mode) ?? MODES[0], [mode]);
   const activeRatio = useMemo(
     () => ASPECT_RATIOS.find(r => r.id === ratio) || ASPECT_RATIOS[0],
     [ratio]
@@ -158,6 +151,20 @@ const AILabSection = () => {
       setProgress(p => (p >= 92 ? p : p + Math.max(1, (95 - p) * 0.08)));
     }, 220);
     return () => window.clearInterval(id);
+  };
+
+  const generateWatermarkFreeImage = async (prompt: string, targetMode: Mode) => {
+    let result = await generateImageServer(prompt, activeRatio.id, quality[0], targetMode);
+    if (!result.ok && result.retryable) {
+      setProgressLabel("O serviço está ocupado. Tentando novamente com segurança...");
+      await new Promise((resolve) => window.setTimeout(resolve, 1200));
+      result = await generateImageServer(prompt, activeRatio.id, quality[0], targetMode);
+    }
+    if (!result.ok || !result.data?.imageUrl) {
+      throw new Error(result.error || "Nenhuma imagem foi retornada pelo gerador.");
+    }
+    await preloadImage(result.data.imageUrl);
+    return result.data.imageUrl;
   };
 
   // Optimize the user prompt for the currently selected generator using AI.
@@ -225,11 +232,11 @@ const AILabSection = () => {
     const enrichedPrompt = PROMPT_BOOSTERS[mode](input);
 
     try {
-      // ---- Text mode (streaming via Lovable AI → fallback Pollinations text → mock) ----
+      // ---- Text mode: never replace an unavailable AI response with fabricated content. ----
       if (mode === "text") {
         let response = "";
         let gotAny = false;
-        let streamFailed = false;
+        let streamError = "";
 
         await new Promise<void>((resolve) => {
           streamChat({
@@ -239,28 +246,13 @@ const AILabSection = () => {
             onDone: () => resolve(),
             onError: (err) => {
               console.warn("[Studio] streamChat failed:", err);
-              streamFailed = true;
+              streamError = err;
               resolve();
             },
           });
         });
 
-        if (!gotAny) {
-          // Fallback: pollinations text
-          try {
-            setProgressLabel("Tentando provedor alternativo...");
-            response = await pollinationsText(enrichedPrompt);
-            setOutput(response);
-          } catch (e) {
-            console.warn("[Studio] pollinations text failed, using mock:", e);
-            response = mockText(input);
-            setOutput(response);
-            toast({ title: "Modo offline", description: "Usando rascunho local — APIs indisponíveis." });
-          }
-        } else if (streamFailed && !response) {
-          response = mockText(input);
-          setOutput(response);
-        }
+        if (!gotAny) throw new Error(streamError || "A IA não retornou conteúdo.");
 
         stop(); setProgress(100);
         await useCredit();
@@ -276,9 +268,7 @@ const AILabSection = () => {
         const srv = await generateVideoServer(enrichedPrompt);
         if (srv.ok && srv.data?.videoUrl) {
           setProgress(100);
-          // Use remote URL directly; build poster from pollinations
-          const posterRes = await generateImageServer(enrichedPrompt, activeRatio.id);
-          const poster = posterRes.ok && posterRes.data?.imageUrl ? posterRes.data.imageUrl : undefined;
+          const poster = await generateWatermarkFreeImage(enrichedPrompt, "video");
           setGeneratedVideo({ url: srv.data.videoUrl, poster, mime: "video/mp4" });
           setOutput(`Vídeo gerado via FAL ✨ — ${activeRatio.name}`);
           await useCredit();
@@ -288,22 +278,7 @@ const AILabSection = () => {
           return;
         }
 
-        if (typeof MediaRecorder === "undefined") {
-          toast({ title: "MediaRecorder indisponível", description: "Gerando preview estático em vez de vídeo." });
-          const still = await generateImageServer(enrichedPrompt, activeRatio.id);
-          const url = still.ok && still.data?.imageUrl
-            ? still.data.imageUrl
-            : pollinationsImage(enrichedPrompt, { width: dims.w, height: dims.h, seed: freshSeed, model: imgModel });
-          await preloadImage(url);
-          setProgress(100);
-          setGeneratedImage(url);
-          setOutput(`Preview de vídeo (estático) ✨ — ${activeRatio.name}`);
-          await useCredit();
-          const id = await saveGeneration(input, url, null);
-          if (id) setLastGenId(id);
-          toast({ title: "Adicionado ao Explore ✨" });
-          return;
-        }
+        if (typeof MediaRecorder === "undefined") throw new Error("MediaRecorder indisponível neste navegador.");
         const result = await generateVideo(enrichedPrompt, {
           width: dims.w,
           height: dims.h,
@@ -318,8 +293,7 @@ const AILabSection = () => {
             setProgressLabel(label);
           },
           resolveFrame: async (framePrompt) => {
-            const f = await generateImageServer(framePrompt, activeRatio.id);
-            return f.ok && f.data?.imageUrl ? f.data.imageUrl : null;
+            return generateWatermarkFreeImage(framePrompt, "video");
           },
         });
         setProgress(100);
@@ -332,24 +306,19 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- 3D mode: try FAL Trellis (preview image) → fallback pollinations ----
+      // ---- 3D mode: real model provider, then a watermark-free render preview. ----
       if (mode === "3d") {
         setProgressLabel("Tentando provedor 3D (FAL Trellis)...");
         const srv = await generate3DServer(enrichedPrompt);
         let url: string | null = null;
         if (srv.ok && srv.data?.previewUrl) url = srv.data.previewUrl;
         if (!url) {
-          const img = await generateImageServer(
-            `${enrichedPrompt}, 3D render, cinematic studio lighting, high detail`,
-            activeRatio.id,
+          url = await generateWatermarkFreeImage(
+            `${enrichedPrompt}, complete object fully visible, centered clean silhouette, neutral studio cyclorama, readable physically based materials, production-ready concept turntable frame`,
+            "3d",
           );
-          if (img.ok && img.data?.imageUrl) url = img.data.imageUrl;
         }
-        if (!url) {
-          url = pollinationsImage(`${enrichedPrompt}, 3D render, cinematic studio lighting, high detail`, {
-            width: dims.w, height: dims.h, seed: freshSeed, model: imgModel,
-          });
-        }
+        if (!url) throw new Error(srv.error || "O gerador 3D não retornou uma prévia.");
         await preloadImage(url);
         stop(); setProgress(100);
         setGeneratedImage(url);
@@ -363,22 +332,7 @@ const AILabSection = () => {
 
       // ---- Image-like modes (Image / Avatar / Logo) ----
       setProgressLabel("Gerando imagem em alta qualidade...");
-      let url: string | null = null;
-      let srv = await generateImageServer(enrichedPrompt, activeRatio.id);
-      if (!srv.ok || !srv.data?.imageUrl) {
-        setProgressLabel("Refinando a geração...");
-        srv = await generateImageServer(enrichedPrompt, activeRatio.id);
-      }
-      if (srv.ok && srv.data?.imageUrl) {
-        url = srv.data.imageUrl;
-      } else {
-        setProgressLabel("Usando gerador alternativo gratuito...");
-        url = pollinationsImage(enrichedPrompt, {
-          width: dims.w, height: dims.h, seed: freshSeed,
-          model: imgModel, enhance: creativity[0] >= 50,
-        });
-      }
-      await preloadImage(url);
+      const url = await generateWatermarkFreeImage(enrichedPrompt, mode);
       stop(); setProgress(100);
       setGeneratedImage(url);
 
@@ -399,7 +353,10 @@ const AILabSection = () => {
       if (/Failed to fetch|NetworkError|network/i.test(msg)) friendly = "Sem conexão com o servidor de geração. Verifique sua internet.";
       else if (/MediaRecorder|captureStream/i.test(msg)) friendly = "Seu navegador não suporta gravação de vídeo. Tente Chrome/Edge atualizado.";
       else if (/frame|imagem/i.test(msg)) friendly = "Falha ao carregar quadros do vídeo. Tente outro prompt ou diminua a qualidade.";
-      else if (/quota|rate|limit|429/i.test(msg)) friendly = "Limite de geração atingido. Aguarde 1 minuto.";
+      else if (/402|crédito|credit|payment/i.test(msg)) friendly = "Os créditos de IA do espaço acabaram. Adicione créditos para continuar gerando sem marca d'água.";
+      else if (/403|bloquead|denied|policy/i.test(msg)) friendly = msg;
+      else if (/quota|rate|limit|429/i.test(msg)) friendly = "Muitas gerações ao mesmo tempo. Aguarde um pouco e tente novamente.";
+      else if (/temporariamente|unavailable|503|502|500/i.test(msg)) friendly = msg;
       toast({ title: "Erro ao gerar", description: friendly, variant: "destructive" });
       console.error("[Studio] generation error:", e);
     } finally {
@@ -535,7 +492,7 @@ const AILabSection = () => {
                   value={imgModel} onChange={e => setImgModel(e.target.value)} disabled={isLoading}
                   className="w-full bg-muted rounded-lg px-3 py-2 text-sm text-foreground outline-none border border-border"
                 >
-                  {POLLINATIONS_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  <option value="flux">StarFury Quality</option>
                 </select>
               </div>
             )}

@@ -1,5 +1,6 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { streamGeneratedImage } from "@/lib/imageStream";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -60,8 +61,16 @@ export async function streamChat({
         if (jsonStr === "[DONE]") { streamDone = true; break; }
         try {
           const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          const content = (parsed.choices?.[0]?.delta?.content ||
+            (parsed.type === "response.output_text.delta" ? parsed.delta : "")) as string | undefined;
+          const reasoning = parsed.type === "response.reasoning_summary_text.delta" ? parsed.delta as string | undefined : undefined;
           if (content) onDelta(content);
+          else if (reasoning) onDelta(reasoning);
+          if (parsed.type === "error") {
+            onError(parsed.error?.message || "A IA não conseguiu concluir a resposta.");
+            streamDone = true;
+            break;
+          }
         } catch {
           textBuffer = line + "\n" + textBuffer;
           break;
@@ -79,7 +88,8 @@ export async function streamChat({
         if (jsonStr === "[DONE]") continue;
         try {
           const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          const content = (parsed.choices?.[0]?.delta?.content ||
+            (parsed.type === "response.output_text.delta" ? parsed.delta : "")) as string | undefined;
           if (content) onDelta(content);
         } catch { /* ignore */ }
       }
@@ -94,20 +104,9 @@ export async function streamChat({
 
 export async function generateImage(prompt: string): Promise<{ imageUrl?: string; text?: string; error?: string }> {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-      },
-      body: JSON.stringify({ prompt, aspect: "1:1", quality: 100, mode: "cover" }),
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok || data?.fallback) {
-      return { error: data?.error || `Falha na geração (${resp.status})` };
-    }
-    return data;
-  } catch {
-    return { error: "Erro de conexão" };
+    const imageUrl = await streamGeneratedImage({ prompt, aspect: "1:1", quality: 100, mode: "image" });
+    return { imageUrl };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Erro de conexão" };
   }
 }

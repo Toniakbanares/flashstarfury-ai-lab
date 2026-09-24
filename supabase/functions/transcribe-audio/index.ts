@@ -1,5 +1,4 @@
-// Transcribe audio via Lovable AI Gateway (OpenAI-compatible STT).
-// Falls back to a mock transcript if LOVABLE_API_KEY is missing.
+// Transcribe audio via Lovable AI Gateway without fabricated fallback text.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -18,33 +17,34 @@ Deno.serve(async (req) => {
       return json({ error: "Missing 'file' in multipart body" }, 400);
     }
 
-    if (!key) {
-      // Mock fallback so the UI keeps working with no key set.
-      return json({
-        text: `[Mock transcript — no LOVABLE_API_KEY configured]\nUploaded: ${file.name} (${Math.round(file.size / 1024)} KB)\n\nExample lyrics:\nVerse 1: Neon lights across the sky\nChorus: We rise, we rise, we rise tonight`,
-        mock: true,
-      }, 200);
-    }
+    if (!key) return json({ error: "A transcrição de áudio não está configurada." }, 500);
 
     const fd = new FormData();
     fd.append("file", file, file.name || "audio.webm");
-    fd.append("model", "openai/gpt-4o-transcribe");
+    fd.append("model", "google/gemini-3.5-transcribe");
 
     const upstream = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}` },
+      headers: { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" },
       body: fd,
     });
 
     if (!upstream.ok) {
       const detail = await upstream.text().catch(() => "");
-      if (upstream.status === 429) return json({ error: "Rate limit exceeded. Please try again shortly." }, 429);
-      if (upstream.status === 402) return json({ error: "AI credits exhausted. Please add credits." }, 402);
-      return json({ error: `Transcription failed (${upstream.status})`, detail }, upstream.status);
+       const safe = detail ? (() => {
+         try {
+           const parsed = JSON.parse(detail);
+           return parsed?.message || parsed?.error?.message;
+         } catch { return undefined; }
+       })() : undefined;
+       if (upstream.status === 429) return json({ error: safe || "Muitas transcrições agora. Aguarde e tente novamente." }, 429);
+       if (upstream.status === 402 || upstream.status === 403) return json({ error: safe || "A transcrição está bloqueada no momento." }, upstream.status);
+       return json({ error: safe || `A transcrição falhou (${upstream.status}).` }, upstream.status);
     }
 
     const data = await upstream.json();
-    return json({ text: data.text ?? "", mock: false }, 200);
+    if (typeof data.text !== "string" || !data.text.trim()) return json({ error: "Nenhuma fala foi identificada no áudio." }, 422);
+    return json({ text: data.text }, 200);
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }

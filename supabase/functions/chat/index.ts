@@ -3,153 +3,103 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-lovable-aig-run-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Expose-Headers": "X-Lovable-AIG-Run-ID",
 };
 
-// Curated, current top-tier models exposed via OpenRouter.
-// Keep this list short and high-quality only — no legacy / low-quality models.
-const ALLOWED_MODELS = new Set<string>([
-  "anthropic/claude-3.5-sonnet",
-  "openai/gpt-4o",
-  "openai/gpt-4o-mini",
-  "google/gemini-2.5-flash",
-  "google/gemini-2.5-pro",
-  "deepseek/deepseek-chat",
-  "mistralai/mistral-large",
-]);
+const MODEL = "openai/gpt-6-astra";
+const MAX_MESSAGES = 80;
+const MAX_CONTENT = 20_000;
 
-const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const KNOWLEDGE = `CONHECIMENTO MULTIDOMÍNIO (use quando relevante, sem citar esta lista):
+- Música profissional: teoria, harmonia funcional e modal, prosódia, métrica, rima interna, imagens concretas, arco emocional, edição de clichês, estruturas de pop, rock, punk, metal, trap, rap, funk, sertanejo, MPB, samba, gospel, R&B, hyperpop, aura, phonk e eletrônica; publishing, créditos e distribuição.
+- Anime e mangá: shonen, shoujo, seinen, isekai, mecha, slice of life, construção de arcos, linguagem de painéis, sakuga, cel shading e design original de personagem.
+- Artes visuais e fotografia: história da arte, teoria de cor, composição, concept art, exposição, lentes, luz, direção e pós-produção.
+- Cinema e vídeo: três atos, continuidade espacial e temporal, gramática de planos, movimento motivado de câmera, montagem, fotografia, som e storyboard.
+- Design, 3D e games: tipografia, grid, identidade, UI/UX, materiais PBR, topologia, iluminação, silhueta, level design e narrativa ambiental.
+- Escrita e tecnologia: storytelling, roteiro, poesia, copywriting, edição, programação, dados, IA e engenharia de prompt.
 
-// Models supported by the Lovable AI Gateway (used as the reliable fallback).
-const GATEWAY_MODEL: Record<string, string> = {
-  "anthropic/claude-3.5-sonnet": "openai/gpt-5.4",
-  "openai/gpt-4o": "openai/gpt-5.4",
-  "openai/gpt-4o-mini": "openai/gpt-5.4-mini",
-  "google/gemini-2.5-flash": "google/gemini-3.8-flash",
-  "google/gemini-2.5-pro": "google/gemini-3.1-pro-preview",
-  "deepseek/deepseek-chat": "google/gemini-3.8-flash",
-  "mistralai/mistral-large": "google/gemini-3.8-flash",
-};
+QUALIDADE: seja específico, prático e original. Em pedidos criativos, entregue trabalho final em vez de esboço. Em letras, respeite o briefing e use detalhes humanos concretos. Em pedidos técnicos, dê passos verificáveis. Responda no idioma do usuário com markdown limpo.`;
 
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode, model } = await req.json();
-
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-    const KNOWLEDGE = `CONHECIMENTO MULTIDOMÍNIO (use quando relevante, sem citar esta lista):
-- Música: teoria (escalas, modos, campo harmônico, cadências), composição e letra, prosódia, produção, mix e master, história e características de gêneros (pop, rock, punk, metal, nu metal, trap, rap, funk, sertanejo, MPB, samba, gospel, R&B, hyperpop, aura, phonk, eletrônica), estrutura de hits, publishing e distribuição.
-- Anime e mangá: subgêneros (shonen, shoujo, seinen, isekai, mecha, slice of life), arquétipos, estrutura de arcos, linguagem de painéis, sakuga, cel shading e design de personagem.
-- Artes visuais: movimentos artísticos, teoria de cor, composição, técnicas tradicionais e digitais, ilustração e concept art.
-- Cinema e vídeo: três atos, linguagem de planos, continuidade, montagem, fotografia, som e storyboard.
-- Fotografia: exposição, lentes, esquemas de luz, direção e pós-produção.
-- Design: tipografia, grid, identidade visual, logo, UI/UX.
-- 3D e games: pipeline, materiais PBR, iluminação, silhueta, level design.
-- Escrita: storytelling, copywriting, roteiro, poesia, edição.
-- Tecnologia: programação, dados, IA e engenharia de prompt.
-
-COMO RESPONDER: seja específico e prático, entregue o resultado pronto em pedidos criativos, passos acionáveis em pedidos técnicos, markdown limpo, e sempre no idioma do usuário.`;
-
-    let systemPrompt =
-      `You are Lumy, the AI assistant of StarFury AI. Be helpful, specific, and friendly. Use clean markdown formatting. Reply in the user's language.\n\n${KNOWLEDGE}`;
-    if (mode === "creative") {
-      systemPrompt =
-        `You are Lumy, the creative director and writer of StarFury AI. Specialize in copy, scripts, hooks, lyrics, visual prompts and structured creative drafts. Deliver finished work, not outlines. Use clean markdown.\n\n${KNOWLEDGE}`;
-    } else if (mode === "code") {
-      systemPrompt =
-        `You are Lumy Coder of StarFury AI. Specialist in code, debugging, and architecture. Always wrap code in fenced markdown blocks with the language tag.\n\n${KNOWLEDGE}`;
+    const body = await req.json().catch(() => null);
+    if (!body || !Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > MAX_MESSAGES) {
+      return json({ error: "Envie uma conversa válida." }, 400);
+    }
+    const messages = body.messages.map((message: unknown) => {
+      const item = message as { role?: unknown; content?: unknown };
+      if ((item.role !== "user" && item.role !== "assistant") || typeof item.content !== "string") return null;
+      return { role: item.role, content: item.content.slice(0, MAX_CONTENT) };
+    });
+    if (messages.some((message: unknown) => message === null)) {
+      return json({ error: "A conversa contém uma mensagem inválida." }, 400);
     }
 
-    const chosenModel = ALLOWED_MODELS.has(model) ? model : DEFAULT_MODEL;
+    const mode = typeof body.mode === "string" ? body.mode : "chat";
+    const role = mode === "creative"
+      ? "Você é Lumy, diretora criativa e escritora da StarFury AI. Entregue textos, letras, roteiros e prompts completos, sem conteúdo de preenchimento."
+      : mode === "code"
+        ? "Você é Lumy Coder da StarFury AI. Especialista em código, depuração e arquitetura. Use blocos de código com a linguagem indicada."
+        : "Você é Lumy, assistente especialista da StarFury AI. Seja útil, precisa e amigável.";
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!apiKey) return json({ error: "A IA não está configurada neste espaço." }, 500);
 
-    let lastStatus = 0;
-    let lastError = "";
+    const incomingRunId = req.headers.get("X-Lovable-AIG-Run-ID")?.trim();
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "fetch",
+        "Content-Type": "application/json",
+        ...(incomingRunId ? { "X-Lovable-AIG-Run-ID": incomingRunId } : {}),
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        instructions: `${role}\n\n${KNOWLEDGE}`,
+        input: messages,
+        stream: true,
+        store: false,
+        reasoning: { effort: "medium", summary: "auto" },
+        include: ["reasoning.encrypted_content"],
+      }),
+    });
 
-    // 1) Primary: Lovable AI Gateway (always available, no external credits)
-    const tryLovable = async () => {
-      if (!LOVABLE_API_KEY) return null;
-      try {
-        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: GATEWAY_MODEL[chosenModel] ?? "google/gemini-3.8-flash",
-            messages: [{ role: "system", content: systemPrompt }, ...messages],
-            stream: true,
-          }),
-        });
-        if (r.ok && r.body) return r;
-        lastStatus = r.status;
-        lastError = await r.text().catch(() => "");
-        console.error("Lovable error:", r.status, lastError);
-      } catch (e) {
-        console.error("Lovable exception:", e);
-      }
-      return null;
-    };
-
-    // 2) Fallback: OpenRouter (only if the account still has credits)
-    const tryOpenRouter = async () => {
-      if (!OPENROUTER_API_KEY) return null;
-      try {
-        const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://pixelnova.lovable.app",
-            "X-Title": "StarFury AI",
-          },
-          body: JSON.stringify({
-            model: chosenModel,
-            messages: [{ role: "system", content: systemPrompt }, ...messages],
-            stream: true,
-            // Keep the reservation small so it fits limited OpenRouter balances
-            // (OpenRouter reserves the model's full context otherwise → 402).
-            max_tokens: 2048,
-            temperature: mode === "code" ? 0.3 : 0.7,
-          }),
-        });
-        if (r.ok && r.body) return r;
-        lastStatus = r.status;
-        lastError = await r.text().catch(() => "");
-        console.error("OpenRouter error:", r.status, lastError);
-      } catch (e) {
-        console.error("OpenRouter exception:", e);
-      }
-      return null;
-    };
-
-    for (const p of [tryLovable, tryOpenRouter]) {
-      const resp = await p();
-      if (resp) {
-        return new Response(resp.body, {
-          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-        });
-      }
+    if (!response.ok || !response.body) {
+      const error = await response.json().catch(() => ({}));
+      const message = typeof error?.message === "string"
+        ? error.message
+        : typeof error?.error?.message === "string"
+          ? error.error.message
+          : "A IA não conseguiu iniciar a resposta.";
+      if (response.status === 402) return json({ error: message }, 402);
+      if (response.status === 403) return json({ error: message }, 403);
+      if (response.status === 429) return json({ error: message }, 429);
+      if (response.status >= 500) return json({ error: message }, response.status);
+      return json({ error: message }, response.status || 500);
     }
 
-    const friendly =
-      lastStatus === 402
-        ? "Sem créditos de IA disponíveis no momento. Adicione créditos para continuar usando o chat."
-        : lastStatus === 429
-          ? "Muitas solicitações agora. Aguarde alguns segundos e tente novamente."
-          : "Os serviços de IA estão temporariamente indisponíveis. Tente novamente em instantes.";
-
-    return new Response(JSON.stringify({ error: friendly, detail: lastError.slice(0, 300) }), {
-      status: lastStatus === 402 || lastStatus === 429 ? lastStatus : 503,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const runId = response.headers.get("X-Lovable-AIG-Run-ID") || incomingRunId;
+    return new Response(response.body, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": response.headers.get("Content-Type") || "text/event-stream",
+        "Cache-Control": "no-cache",
+        ...(runId ? { "X-Lovable-AIG-Run-ID": runId } : {}),
+      },
     });
-
-  } catch (e) {
-    console.error("chat error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    console.error("chat error:", error);
+    return json({ error: "Os serviços de IA estão temporariamente indisponíveis." }, 500);
   }
 });

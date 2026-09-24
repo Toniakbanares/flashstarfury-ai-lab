@@ -30,7 +30,7 @@ function once(system: string, userPrompt: string, signal?: AbortSignal): Promise
 }
 
 /**
- * Ask the AI with retry + free fallback provider and friendly error messages.
+ * Ask the AI with one bounded retry for transient failures and friendly errors.
  */
 export async function askAI(
   system: string,

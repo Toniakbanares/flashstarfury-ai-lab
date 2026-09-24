@@ -154,7 +154,11 @@ const AILabSection = () => {
   };
 
   const generateWatermarkFreeImage = async (prompt: string, targetMode: Mode) => {
-    let result = await generateImageServer(prompt, activeRatio.id, quality[0], targetMode);
+    let result = await generateImageServer(prompt, activeRatio.id, quality[0], targetMode, (frame, isFinal) => {
+      if (targetMode !== "video") setGeneratedImage(frame);
+      setProgress(isFinal ? 96 : 58);
+      setProgressLabel(isFinal ? "Finalizando imagem..." : "Refinando detalhes...");
+    });
     if (!result.ok && result.retryable) {
       setProgressLabel("O serviço está ocupado. Tentando novamente com segurança...");
       await new Promise((resolve) => window.setTimeout(resolve, 1200));
@@ -352,11 +356,11 @@ const AILabSection = () => {
       let friendly = "Falha ao gerar. Tente novamente em alguns segundos.";
       if (/Failed to fetch|NetworkError|network/i.test(msg)) friendly = "Sem conexão com o servidor de geração. Verifique sua internet.";
       else if (/MediaRecorder|captureStream/i.test(msg)) friendly = "Seu navegador não suporta gravação de vídeo. Tente Chrome/Edge atualizado.";
-      else if (/frame|imagem/i.test(msg)) friendly = "Falha ao carregar quadros do vídeo. Tente outro prompt ou diminua a qualidade.";
       else if (/402|crédito|credit|payment/i.test(msg)) friendly = "Os créditos de IA do espaço acabaram. Adicione créditos para continuar gerando sem marca d'água.";
       else if (/403|bloquead|denied|policy/i.test(msg)) friendly = msg;
       else if (/quota|rate|limit|429/i.test(msg)) friendly = "Muitas gerações ao mesmo tempo. Aguarde um pouco e tente novamente.";
       else if (/temporariamente|unavailable|503|502|500/i.test(msg)) friendly = msg;
+      else if (/frame|quadro/i.test(msg)) friendly = "Falha ao carregar quadros do vídeo. Tente outro prompt ou diminua a qualidade.";
       toast({ title: "Erro ao gerar", description: friendly, variant: "destructive" });
       console.error("[Studio] generation error:", e);
     } finally {

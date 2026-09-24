@@ -69,8 +69,8 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ fallback: true, error: "Provedor 3D indisponível" }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: "O gerador de modelos 3D está temporariamente indisponível." }), {
+      status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro" }), {

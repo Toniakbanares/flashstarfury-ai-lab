@@ -16,6 +16,16 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+const sseImage = (imageUrl: string) => {
+  const match = /^data:image\/png;base64,(.+)$/.exec(imageUrl);
+  if (!match) return null;
+  const payload = JSON.stringify({ type: "image_generation.completed", b64_json: match[1] });
+  return new Response(`event: image_generation.completed\ndata: ${payload}\n\n`, {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+  });
+};
+
 const sizeFor = (aspect: string) => {
   if (aspect === "16:9" || aspect === "4:3" || aspect === "21:9") return "1536x1024";
   if (aspect === "9:16" || aspect === "3:4") return "1024x1536";
@@ -50,6 +60,7 @@ serve(async (req) => {
     }
 
     const aspect = typeof body?.aspect === "string" && ALLOWED_ASPECTS.has(body.aspect) ? body.aspect : "1:1";
+    const streaming = body?.stream !== false;
     const mode = typeof body?.mode === "string" && ALLOWED_MODES.has(body.mode) ? body.mode : "image";
     const requestedQuality = typeof body?.quality === "number" ? Math.max(0, Math.min(100, body.quality)) : 80;
     const quality = requestedQuality >= 90 ? "max" : requestedQuality >= 70 ? "high" : "medium";
@@ -70,6 +81,7 @@ serve(async (req) => {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
           method: "POST",
           headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
             "Lovable-API-Key": LOVABLE_API_KEY,
             "X-Lovable-AIG-SDK": "fetch",
             "Content-Type": "application/json",
@@ -77,12 +89,23 @@ serve(async (req) => {
           body: JSON.stringify({
             model: IMAGE_MODEL,
             prompt: refined,
+            ...(streaming ? { stream: true, partial_images: 1 } : {}),
             size: sizeFor(aspect),
             quality,
             output_format: "png",
             ...(mode === "logo" ? { background: "transparent" } : { background: "opaque" }),
           }),
         });
+        if (response.ok && streaming && response.body) {
+          return new Response(response.body, {
+            status: response.status,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": response.headers.get("Content-Type") || "text/event-stream",
+              "Cache-Control": "no-cache",
+            },
+          });
+        }
         if (response.ok) {
           const data = await response.json();
           const b64 = data?.data?.[0]?.b64_json;
@@ -130,6 +153,15 @@ serve(async (req) => {
           const data = await response.json();
           const imageUrl = data?.images?.[0]?.url;
           if (typeof imageUrl === "string" && imageUrl.startsWith("https://")) {
+            if (streaming) {
+              const bytes = new Uint8Array(await (await fetch(imageUrl)).arrayBuffer());
+              let binary = "";
+              for (let i = 0; i < bytes.length; i += 0x8000) {
+                binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+              }
+              const streamed = sseImage(`data:image/png;base64,${btoa(binary)}`);
+              if (streamed) return streamed;
+            }
             return json({ imageUrl, provider: "fal" });
           }
         } else {

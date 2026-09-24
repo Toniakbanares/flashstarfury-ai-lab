@@ -84,7 +84,7 @@ const LyricsTools = () => {
         return;
       }
       setText((prev) => (prev ? `${prev}\n\n${data.text}` : data.text));
-      toast.success(data.mock ? "Mock transcript inserted (no API key set)" : "Transcript inserted", { id: toastId });
+      toast.success("Transcrição inserida", { id: toastId });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Transcription failed", { id: toastId });
     } finally {
@@ -98,7 +98,7 @@ const LyricsTools = () => {
     try {
       const res = await askAI("Analyze these lyrics briefly: mood, meter, suggestions (max 5 bullets).", text);
       toast.success("Analysis ready"); setText(text + "\n\n---\nAI Analysis:\n" + res);
-    } catch (e) { toast.error("Failed"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível analisar a letra"); }
     setBusy(false);
   };
 

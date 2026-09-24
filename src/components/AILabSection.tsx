@@ -154,7 +154,11 @@ const AILabSection = () => {
   };
 
   const generateWatermarkFreeImage = async (prompt: string, targetMode: Mode) => {
-    let result = await generateImageServer(prompt, activeRatio.id, quality[0], targetMode);
+    let result = await generateImageServer(prompt, activeRatio.id, quality[0], targetMode, (frame, isFinal) => {
+      if (targetMode !== "video") setGeneratedImage(frame);
+      setProgress(isFinal ? 96 : 58);
+      setProgressLabel(isFinal ? "Finalizando imagem..." : "Refinando detalhes...");
+    });
     if (!result.ok && result.retryable) {
       setProgressLabel("O serviço está ocupado. Tentando novamente com segurança...");
       await new Promise((resolve) => window.setTimeout(resolve, 1200));

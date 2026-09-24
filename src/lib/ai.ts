@@ -1,5 +1,6 @@
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { streamGeneratedImage } from "@/lib/imageStream";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -94,20 +95,9 @@ export async function streamChat({
 
 export async function generateImage(prompt: string): Promise<{ imageUrl?: string; text?: string; error?: string }> {
   try {
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-      },
-      body: JSON.stringify({ prompt, aspect: "1:1", quality: 100, mode: "cover" }),
-    });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok || data?.fallback) {
-      return { error: data?.error || `Falha na geração (${resp.status})` };
-    }
-    return data;
-  } catch {
-    return { error: "Erro de conexão" };
+    const imageUrl = await streamGeneratedImage({ prompt, aspect: "1:1", quality: 100, mode: "image" });
+    return { imageUrl };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Erro de conexão" };
   }
 }

@@ -1,5 +1,6 @@
 // Thin client for our Edge Functions (image / video / 3d / text).
 // All return a status-aware result so callers never retry terminal AI failures.
+import { streamGeneratedImage } from "@/lib/imageStream";
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -29,8 +30,28 @@ async function call<T = unknown>(fn: string, body: unknown): Promise<GenerationR
   }
 }
 
-export const generateImageServer = (prompt: string, aspect = "1:1", quality = 80, mode = "image") =>
-  call<{ imageUrl: string; text?: string; provider?: string }>("generate-image", { prompt, aspect, quality, mode });
+export async function generateImageServer(
+  prompt: string,
+  aspect = "1:1",
+  quality = 80,
+  mode = "image",
+  onFrame?: (imageUrl: string, isFinal: boolean) => void,
+): Promise<GenerationResult<{ imageUrl: string }>> {
+  try {
+    const imageUrl = await streamGeneratedImage({ prompt, aspect, quality, mode }, onFrame);
+    return { ok: true, data: { imageUrl }, status: 200, retryable: false };
+  } catch (error) {
+    const status = typeof (error as { status?: unknown })?.status === "number"
+      ? (error as { status: number }).status
+      : undefined;
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Falha na geração da imagem.",
+      status,
+      retryable: status === 429 || (typeof status === "number" && status >= 500),
+    };
+  }
+}
 
 export const generateVideoServer = (prompt: string) =>
   call<{ videoUrl: string }>("generate-video", { prompt });

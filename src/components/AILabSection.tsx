@@ -266,7 +266,7 @@ const AILabSection = () => {
         return;
       }
 
-      // ---- Video mode (FAL via edge function → fallback canvas .webm → fallback static image) ----
+      // ---- Video mode: native provider, then local composition from watermark-free frames. ----
       if (mode === "video") {
         setProgressLabel("Tentando provedor de vídeo (FAL)...");
         const srv = await generateVideoServer(enrichedPrompt);
@@ -545,7 +545,7 @@ const AILabSection = () => {
             )}
 
             <p className="text-xs text-muted-foreground flex items-center gap-1 pt-2 border-t border-border">
-              <Sparkles className="h-3 w-3 text-primary" /> Gerações ilimitadas grátis
+              <Sparkles className="h-3 w-3 text-primary" /> Geração sem marca d'água
               <button
                 onClick={() => setPixOpen(true)}
                 className="ml-auto text-primary hover:underline font-semibold"

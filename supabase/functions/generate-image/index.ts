@@ -55,8 +55,8 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => null);
     const prompt = body?.prompt;
-    if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 1500) {
-      return json({ error: "Descreva a imagem em até 1500 caracteres." }, 400);
+    if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 6000) {
+      return json({ error: "Descreva a imagem em até 6000 caracteres." }, 400);
     }
 
     const aspect = typeof body?.aspect === "string" && ALLOWED_ASPECTS.has(body.aspect) ? body.aspect : "1:1";

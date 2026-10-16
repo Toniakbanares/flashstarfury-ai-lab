@@ -1,0 +1,15 @@
+ALTER TABLE public.community_posts ADD COLUMN rules_accepted boolean NOT NULL DEFAULT false;
+ALTER TABLE public.community_posts ADD CONSTRAINT community_title_length CHECK (char_length(btrim(title)) BETWEEN 1 AND 120);
+ALTER TABLE public.community_posts ADD CONSTRAINT community_owned_image CHECK (image_url LIKE user_id::text || '/%');
+DROP POLICY "Users create own posts" ON public.community_posts;
+CREATE POLICY "Users create accepted own posts" ON public.community_posts FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id AND rules_accepted = true);
+DROP POLICY "Public read community" ON storage.objects;
+CREATE POLICY "Read published community files" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'community' AND (EXISTS (SELECT 1 FROM public.community_posts p WHERE p.image_url = name) OR (storage.foldername(name))[1] = auth.uid()::text));
+CREATE TABLE public.community_reports (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), post_id uuid NOT NULL REFERENCES public.community_posts(id) ON DELETE CASCADE, user_id uuid NOT NULL, reason text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE (post_id, user_id), CONSTRAINT report_reason_length CHECK (char_length(btrim(reason)) BETWEEN 3 AND 500));
+GRANT SELECT, INSERT, DELETE ON public.community_reports TO authenticated;
+GRANT ALL ON public.community_reports TO service_role;
+ALTER TABLE public.community_reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users report as themselves" ON public.community_reports FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins read reports" ON public.community_reports FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins resolve reports" ON public.community_reports FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+CREATE INDEX community_posts_created_idx ON public.community_posts(created_at DESC);

@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string
+          rules_accepted: boolean
           title: string
           user_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url: string
+          rules_accepted?: boolean
           title: string
           user_id: string
         }
@@ -33,10 +35,43 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string
+          rules_accepted?: boolean
           title?: string
           user_id?: string
         }
         Relationships: []
+      }
+      community_reports: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       generation_likes: {
         Row: {

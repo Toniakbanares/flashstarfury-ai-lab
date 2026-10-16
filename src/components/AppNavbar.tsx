@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark, Plus, Heart, Music } from "lucide-react";
+import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark, Plus, Heart, Music, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import mascotImg from "@/assets/mascot.png";
@@ -10,6 +10,7 @@ const navItems = [
   { path: "/", label: "Home", icon: Sparkles },
   { path: "/tools", label: "Tools", icon: Wrench },
   { path: "/explore", label: "Explore", icon: Compass },
+  { path: "/community", label: "Comunidade", icon: Users },
   { path: "/music", label: "AI Music", icon: Music },
   { path: "/offerings", label: "Earn", icon: Gift },
   { path: "/pricing", label: "Pricing", icon: CreditCard },
@@ -30,7 +31,7 @@ const AppNavbar = () => {
           <h1 className="font-heading text-lg font-bold gradient-text">StarFury AI</h1>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden 2xl:flex items-center gap-1">
           {navItems.map(({ path, label, icon: Icon }) => (
             <Link key={path} to={path}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
@@ -85,10 +86,10 @@ const AppNavbar = () => {
       </div>
 
       {/* Mobile nav */}
-      <div className="flex md:hidden items-center justify-around border-t border-border px-2 py-1">
+      <div className="flex 2xl:hidden items-center gap-1 overflow-x-auto border-t border-border px-2 py-1">
         {navItems.map(({ path, label, icon: Icon }) => (
           <Link key={path} to={path}
-            className={`flex flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-xs transition-all ${
+            className={`flex shrink-0 flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-xs transition-all ${
               location.pathname === path ? "text-primary" : "text-muted-foreground"
             }`}>
             <Icon className="h-4 w-4" /> {label}

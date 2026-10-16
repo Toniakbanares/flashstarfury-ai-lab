@@ -24,6 +24,7 @@ import Favorites from "./pages/Favorites";
 import SubmitTool from "./pages/SubmitTool";
 import MusicStudio from "./pages/MusicStudio";
 import NotFound from "./pages/NotFound";
+import Community from "./pages/Community";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/tools" element={<Tools />} />
               <Route path="/explore" element={<Explore />} />
+              <Route path="/community" element={<Community />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ai-image-generator" element={<AIImageGenerator />} />

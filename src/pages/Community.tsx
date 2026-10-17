@@ -61,6 +61,7 @@ export default function Community() {
 
   const publish = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!user || busy) return;
     const invalid = validateCommunityPost(title, accepted) || (file ? validateCommunityFile(file) : "Escolha uma imagem.");
     if (invalid || !file) { setError(invalid || "Escolha uma imagem."); return; }
@@ -74,7 +75,7 @@ export default function Community() {
       uploaded = true;
       const { error: postError } = await supabase.from("community_posts").insert({ user_id: user.id, title: title.trim(), image_url: path, rules_accepted: true });
       if (postError) throw postError;
-      setTitle(""); setFile(null); setAccepted(false); event.currentTarget?.reset();
+      setTitle(""); setFile(null); setAccepted(false); form.reset();
       toast({ title: "Imagem publicada!" }); await load();
     } catch {
       if (uploaded) await supabase.storage.from("community").remove([path]);

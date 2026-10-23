@@ -15,6 +15,13 @@
       "when": 1792150143194,
       "tag": "0001_community_safety",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792789957387,
+      "tag": "0002_admin_usage_stats",
+      "breakpoints": true
     }
   ]
 }

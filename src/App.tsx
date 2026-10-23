@@ -1,3 +1,4 @@
+import Admin from "@/pages/Admin";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/tools" element={<Tools />} />
               <Route path="/explore" element={<Explore />} />
               <Route path="/community" element={<Community />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/ai-image-generator" element={<AIImageGenerator />} />

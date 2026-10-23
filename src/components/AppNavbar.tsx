@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Sparkles, Wrench, Compass, CreditCard, LayoutDashboard, LogIn, LogOut, Star, Gift, Bookmark, Plus, Heart, Music, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
+import { useAdmin } from "@/hooks/useAdmin";
 import mascotImg from "@/assets/mascot.png";
 import PixSupportModal from "@/components/PixSupportModal";
 
@@ -19,6 +20,7 @@ const navItems = [
 const AppNavbar = () => {
   const { user, signOut } = useAuth();
   const { credits } = useCredits();
+  const isAdmin = useAdmin();
   const location = useLocation();
   const [pixOpen, setPixOpen] = useState(false);
 
@@ -54,6 +56,14 @@ const AppNavbar = () => {
                 }`}>
                 <LayoutDashboard className="h-4 w-4" /> Dashboard
               </Link>
+              {isAdmin && (
+                <Link to="/admin"
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    location.pathname === "/admin" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}>
+                  <Star className="h-4 w-4" /> Admin
+                </Link>
+              )}
             </>
           )}
         </div>

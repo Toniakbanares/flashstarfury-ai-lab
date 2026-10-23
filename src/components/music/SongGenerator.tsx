@@ -1,3 +1,4 @@
+import { saveLyric } from "@/lib/lyricsLibrary";
 import { useMemo, useRef, useState } from "react";
 import { Loader2, Sparkles, Shuffle, Copy, Download, Save, Square, Wand2, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";

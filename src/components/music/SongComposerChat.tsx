@@ -143,7 +143,8 @@ const SongComposerChat = () => {
   const save = (text: string) => {
     try {
       saveProject({ title: titleOf(text), artist: "Você", lyrics: text, status: "draft" });
-      toast.success("Salvo no Dashboard");
+      saveLyric(titleOf(text), text);
+      toast.success("Salvo em Minhas Letras");
     } catch {
       toast.error("Não foi possível salvar");
     }

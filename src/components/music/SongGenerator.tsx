@@ -89,7 +89,8 @@ const SongGenerator = () => {
     if (!output.trim()) return;
     try {
       saveProject({ title, artist: "Você", lyrics: output, status: "draft" });
-      toast.success("Salvo no Dashboard");
+      saveLyric(title, output);
+      toast.success("Salvo em Minhas Letras");
     } catch {
       toast.error("Não foi possível salvar");
     }

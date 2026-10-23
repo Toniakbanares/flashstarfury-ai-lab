@@ -74,6 +74,8 @@ export async function askAIStream(
     });
   } catch (e) {
     if (signal?.aborted) throw new AiError("Geração cancelada.");
+    const raw = e instanceof Error ? e.message : String(e);
+    if (!isRetryable(raw)) throw new AiError(friendly(raw));
     const out = await askAI(system, userPrompt, signal);
     onDelta(out);
     return out;

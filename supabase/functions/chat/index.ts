@@ -81,7 +81,9 @@ serve(async (req) => {
         : typeof error?.error?.message === "string"
           ? error.error.message
           : "A IA não conseguiu iniciar a resposta.";
-      if (response.status === 402) return json({ error: message }, 402);
+      if (response.status === 402) {
+        return json({ error: "Os créditos de IA do espaço acabaram. Adicione créditos para continuar usando o chat." }, 402);
+      }
       if (response.status === 403) return json({ error: message }, 403);
       if (response.status === 429) return json({ error: message }, 429);
       if (response.status >= 500) return json({ error: message }, response.status);

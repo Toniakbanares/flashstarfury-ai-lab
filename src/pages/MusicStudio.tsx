@@ -10,10 +10,13 @@ import PublishingAssistant from "@/components/music/PublishingAssistant";
 import CoverDesigner from "@/components/music/CoverDesigner";
 import MetadataTab from "@/components/music/MetadataTab";
 import MusicDashboard from "@/components/music/MusicDashboard";
+import LyricsLibrary from "@/components/music/LyricsLibrary";
+import { BookOpen } from "lucide-react";
 
 const TABS = [
   { id: "composer", label: "Compositor IA", icon: MessageSquare, Comp: SongComposerChat },
   { id: "generator", label: "Gerar Música", icon: Sparkles, Comp: SongGenerator },
+  { id: "library", label: "Minhas Letras", icon: BookOpen, Comp: LyricsLibrary },
 
   { id: "songwriter", label: "Songwriter", icon: Feather, Comp: Songwriter },
   { id: "lyrics", label: "Lyrics Tools", icon: FileText, Comp: LyricsTools },
